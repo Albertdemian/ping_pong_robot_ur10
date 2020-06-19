@@ -1,6 +1,0 @@
-numpy
-pylon
-matplotlib
-imutils
-opencv-python
-rospkg
