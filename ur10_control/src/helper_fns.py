@@ -54,7 +54,7 @@ class ball_projectile():
         return magnitude, [vx/magnitude,vy/magnitude,vz/magnitude]
 
     def get_trajectory_intercept(self):
-
+        
 
     def check_intercept_bounds(self):
 
@@ -62,13 +62,15 @@ class ball_projectile():
     def append_data(self):
 
         #append velocity and pose
-        # 
+        
     
     def step(self, pose):
         #update velocity and position of ball 
 
     def control(self): 
-        #control velocty 
+        #control velocty
+         trjectory_intercept = get_trajectory_intercept(self)
+         
 
 
 
