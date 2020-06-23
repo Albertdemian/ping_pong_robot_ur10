@@ -28,6 +28,10 @@ class ball_projectile():
         self.time_between_frames = skipped_frames* time_step
         self.current_time = 0
 
+        self.window_limit_y = [-1,1]
+        self.window_limit_z = [-1,1]
+        
+
         self.diameter= ball_diameter
         self.radius = self.diameter/2
 
@@ -54,16 +58,47 @@ class ball_projectile():
         return magnitude, [vx/magnitude,vy/magnitude,vz/magnitude]
 
     def get_trajectory_intercept(self):
-        
 
-    def check_intercept_bounds(self):
+        
+=======
+
+        time_to_plane = self.x_intercept/self.vx
+        y_intercept = self.vx* time_to_plane
+        z_intercept  = self.vz - (0.5* self.az * time_to_plane**2)
+
+        return y_intercept, z_intercept, time_to_plane
+
+
+
+
+    def check_intercept_bounds(self, y_intercept, z_intercept):
+        
+        if y_intercept > self.window_limit_y[0]  and y_intercept < self.window_limit_y[1]:
+            within_y = True
+
+        if z_intercept > self.window_limit_z[1] and z_intercept < self.window_limit_z[1]:
+            within_z = True
+
+
+        if within_y and within_z:
+            within_range = True
+
+        else: 
+            within_range =  False
+
+        return within_range
 
     
     def append_data(self):
 
         #append velocity and pose
+
         
     
+=======
+        # 
+
+
     def step(self, pose):
         #update velocity and position of ball 
 
@@ -71,6 +106,7 @@ class ball_projectile():
         #control velocty
          trjectory_intercept = get_trajectory_intercept(self)
          
+
 
 
 
