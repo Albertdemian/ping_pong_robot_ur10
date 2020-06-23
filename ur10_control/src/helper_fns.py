@@ -35,6 +35,11 @@ class ball_projectile():
         self.diameter= ball_diameter
         self.radius = self.diameter/2
 
+        self.vxs = []
+        self.vys  =[]
+        self.vzs  =[]
+        self.poses = []
+
 
     def get_vel_and_dir(self): 
         #to calculate velocity and direction from frames
@@ -59,8 +64,7 @@ class ball_projectile():
 
     def get_trajectory_intercept(self):
 
-        
-=======
+
 
         time_to_plane = self.x_intercept/self.vx
         y_intercept = self.vx* time_to_plane
@@ -92,19 +96,38 @@ class ball_projectile():
     def append_data(self):
 
         #append velocity and pose
-
         
-    
-=======
-        # 
+        self.vxs.append(self.vx)
+        self.vys.append(self.vy)
+        self.vzs.append(self.vz)
+        self.poses.append(self.ball_position)
+
+
 
 
     def step(self, pose):
         #update velocity and position of ball 
 
+
+
     def control(self): 
         #control velocty
          trjectory_intercept = get_trajectory_intercept(self)
+
+========
+
+    def reset(self): 
+        self.vx = 0
+        self.vy = 0
+        self.vz = 0
+
+        self.current_time = 0
+
+        self.vxs = []
+        self.vys  =[]
+        self.vzs  =[]
+        self.poses = []
+
          
 
 
