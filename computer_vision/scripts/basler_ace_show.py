@@ -13,12 +13,10 @@ from collections import deque
 
 # Created function in order to calculate FPS
 class FPS():
-    def __init__(self, chdir_path = os.getcwd()):
+    def __init__(self):
         self.fps = 0
         self.i = 1
         self.start_time = time.time()
-        os.chdir(chdir_path)
-
     def update(self):
         stop_time = time.time()
         fps_frame = 1/(stop_time-self.start_time)
@@ -36,6 +34,8 @@ class Basler_Ace_Camera():
         self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
         self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         self.camera.Open()
+        self.script_path = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(self.script_path)
 
     def record(self):
         ''' 
@@ -64,7 +64,7 @@ class Basler_Ace_Camera():
             fps.update()
         self.camera.Close()
 
-    def collect_images(self, pause = 3, number_of_images = 15, path='Pictures'):
+    def collect_images(self, pause = 3, number_of_images = 15, folder='Pictures'):
         '''
         The method that allows you to collect images in the needed folder.
 
@@ -76,7 +76,7 @@ class Basler_Ace_Camera():
 
         fps = FPS()
         frame = 0
-        folder = path
+        path = os.path.join(self.script_path,folder)
         if not os.path.exists(folder):
             os.makedirs(folder)
         shot_time_start = time.time()
@@ -128,7 +128,7 @@ class Basler_Ace_Camera():
         imgpoints = [] # 2d points in image plane.
 
         #Finding all the images .jpg
-        os.chdir(path)
+        os.chdir(self.script_path+'/'+path)
         images = glob.glob('*.jpg')
         print(images)
         print('Unrecognized images (if any):')
@@ -207,7 +207,7 @@ class Basler_Ace_Camera():
             tot_error += error
 
         print("reprojection error = %.2f \n" % (tot_error/len(objpoints)))
-    def track_the_ball(self, buffer_size = 64, path = 'Pictures/', ball_diameter = 40, k = 2):
+    def track_the_ball(self, buffer_size = 64, path = 'Pictures', ball_diameter = 40, k = 2):
         '''
         path - the path where camera parameters npz file saved;
         buffer_size - is the maximum size of our deque , 
@@ -219,7 +219,7 @@ class Basler_Ace_Camera():
         reference: https://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
         '''
         # Export the parameters of the camera from the files
-        data = np.load(path+'Parameters.npz')
+        data = np.load(self.script_path+'/'+path+'/Parameters.npz')
         # define the lower and upper boundaries of the ball
         # ball in the HSV color space, then initialize the
         # list of tracked points
@@ -304,6 +304,7 @@ class Basler_Ace_Camera():
         # close all windows
         cv2.destroyAllWindows()
         self.camera.Close()
+        
 camera = Basler_Ace_Camera()
 
 # camera.record()
