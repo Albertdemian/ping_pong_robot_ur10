@@ -33,7 +33,7 @@ def cartes_callback(robot_cartesian_pos):
 
 
 rospy.init_node("dynamic_sync_joints")
-r = rospy.Rate(1)
+r = rospy.Rate(0.5)
 joints_sub = rospy.Subscriber("/joints_state", Floats, pos_callback)
 cartesian_sub  = rospy.Subscriber("/end_effector_position", Floats, cartes_callback)
 
@@ -41,7 +41,7 @@ joints_client = dynamic_reconfigure.client.Client("Joint_controller", timeout=30
 cartesian_client = dynamic_reconfigure.client.Client("cartesian_controller", timeout= 30, config_callback=callback2)
 
 i = 0
-while not rospy.is_shutdown() and i <2:
+while not rospy.is_shutdown() and i <6:
     print("Position :", joints_position)
 
     try: 

@@ -55,10 +55,11 @@ try:
         _ = wait()
         #rob.speedl([0.5,0.1,0,1.57,0,0], 0.5 , 0.1)
         i=0
-        while i < 20:
+        while i < 10:
 
-            rob.speedj([5,5,5,5,5,5], 0.1,0.15)
+            rob.speedl([0,-5,0,0,5,-5], 1,0.15)
             i+=1
+        rob.stopl(acc = 1)
         #time.sleep(2)
 
 finally: 

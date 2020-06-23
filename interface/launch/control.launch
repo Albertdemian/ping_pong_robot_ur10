@@ -6,7 +6,7 @@
   <node name="UR10" pkg="ur10_control" type="robot_state.py"/>
   <node name="Joint_controller" pkg="interface" type="joints_cont.py" />
   <node name="cartesian_controller" pkg="interface" type="cartesian_cont.py" />
-  <node name="dynamic_sync_joints" pkg= "interface" type= "synch.py" />
   <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui" args="-s configure" />
+  <node name="dynamic_sync_joints" pkg= "interface" type= "synch.py" />
   
 </launch>
