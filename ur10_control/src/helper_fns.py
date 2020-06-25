@@ -7,50 +7,53 @@ import numpy as np
 
 class ball_projectile():
 
-    def __init__(self, poses = poses, time_step = time_step, skipped_frames = 1):
+    def __init__(self, poses = None, time_step = 0.01, skipped_frames = 1):
+        
+        # acceleration components
         self.ax = 0
         self.ay = 0
         self.az = -9.81
 
+        #ball velocity components
         self.vx = 0
         self.vy = 0
         self.vz = 0
 
+        #initialization poses
         self.pose_1 = poses[0]
         self.pose_2 = poses[1]
 
+        #ball position
         self.ball_position = self.pose_2
 
+        # x-axis distance where robot will always recieve the ball
         self.x_intercept = 0.5
+        # y and z limits for the robot to recieve the ball
+        self.window_limit_y = [-1,1]
+        self.window_limit_z = [-1,1]
 
+        #time information
         self.time_step = time_step
         self.skipped_frames = skipped_frames
         self.time_between_frames = skipped_frames* time_step
         self.current_time = time_step
 
-        self.window_limit_y = [-1,1]
-        self.window_limit_z = [-1,1]
-        
 
-        self.diameter= ball_diameter
+        self.diameter= 0.04
         self.radius = self.diameter/2
-
+        
+        #arrays to save data 
         self.vxs = []
         self.vys  =[]
         self.vzs  =[]
-        self.poses = []
+        self.xs = []
+        self.ys = []
+        self.zs = []
 
 
     def get_vel_and_dir(self): 
         #to calculate velocity and direction from frames
-        '''
-        argumends: 
-        poses: list of two poses [x,y,z] of the ball
-        time: time between these two poses
 
-        Returns: 
-        magnitude of ball velocity (V) and directional vector [vx, vy, vz]/V 
-        '''
         x1,y2,z1 = self.pose_1
         x2,y2,z2 = self.pose_2
 
@@ -77,10 +80,8 @@ class ball_projectile():
 
     def get_trajectory_intercept(self):
 
-
-
-        time_to_plane = self.x_intercept/self.vx
-        y_intercept = self.vx* time_to_plane
+        time_to_plane = (self.x_intercept-self.ball_position[0])/self.vx
+        y_intercept = self.vy* time_to_plane
         z_intercept  = self.vz - (0.5* self.az * time_to_plane**2)
 
         return y_intercept, z_intercept, time_to_plane
@@ -113,9 +114,9 @@ class ball_projectile():
         self.vxs.append(self.vx)
         self.vys.append(self.vy)
         self.vzs.append(self.vz)
-        self.poses.append(self.ball_position)
-
-
+        self.xs.append(self.ball_position[0])
+        self.ys.append(self.ball_position[1])
+        self.zs.append(self.ball_position[2])
 
 
     def step(self, pose):
@@ -137,16 +138,23 @@ class ball_projectile():
         return coming
 
 
-
-
-
-
-
     def control(self): 
         #control velocty
-         trjectory_intercept = get_trajectory_intercept(self)
+         y_intercept, z_intercept, time_to_plane = get_trajectory_intercept(self)
+         vx= self.x_intercept/time_to_plane
+         vy= y_intercept/time_to_plane
+         vz= z_intercept+ 0.5 * (self.az) * time_to_plane**2
+         magnitude= np.sqrt(vx**2 + vy**2 + vz**2)
+         phi= np.arccos(vx/magnitude)
+         theta= np.arccos(vy/magnitude)
+         psi= np.arccos(vz/magnitude)
+        
+        return (self.x_intercept, y_intercept, z_intercept, -phi, -theta, -psi)
 
-========
+
+    def kick(self):
+        pass
+
 
     def reset(self): 
         self.vx = 0
@@ -158,7 +166,9 @@ class ball_projectile():
         self.vxs = []
         self.vys  =[]
         self.vzs  =[]
-        self.poses = []
+        self.xs = []
+        self.ys = []
+        self.zs = []
 
          
 
