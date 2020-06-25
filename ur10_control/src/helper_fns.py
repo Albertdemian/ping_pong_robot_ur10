@@ -81,8 +81,8 @@ class ball_projectile():
     def get_trajectory_intercept(self):
 
         time_to_plane = (self.x_intercept-self.ball_position[0])/self.vx
-        y_intercept = self.vy* time_to_plane
-        z_intercept  = self.vz - (0.5* self.az * time_to_plane**2)
+        y_intercept = self.ball_position[1] + self.vy* time_to_plane
+        z_intercept  = self.ball_position[2] + (self.vz - (0.5* self.az * time_to_plane**2))
 
         return y_intercept, z_intercept, time_to_plane
 
@@ -138,18 +138,23 @@ class ball_projectile():
         return coming
 
 
-    def control(self): 
+    def control(self, kick = False): 
         #control velocty
-         y_intercept, z_intercept, time_to_plane = get_trajectory_intercept(self)
-         vx= self.x_intercept/time_to_plane
-         vy= y_intercept/time_to_plane
-         vz= z_intercept+ 0.5 * (self.az) * time_to_plane**2
-         magnitude= np.sqrt(vx**2 + vy**2 + vz**2)
-         phi= np.arccos(vx/magnitude)
-         theta= np.arccos(vy/magnitude)
-         psi= np.arccos(vz/magnitude)
+        y_intercept, z_intercept, time_to_plane = get_trajectory_intercept(self)
+        vx= self.vx 
+        vy= self.vy
+        vz= z_intercept+ 0.5 * (self.az) * time_to_plane**2
+        magnitude= np.sqrt(vx**2 + vy**2 + vz**2)
+        phi= np.arccos(vx/magnitude)
+        theta= np.arccos(vy/magnitude)
+        psi= np.arccos(vz/magnitude)
+
+        intercept_position = (self.x_intercept, y_intercept, z_intercept, -phi, -theta, -psi)
+
+        if kick: 
+            pass
         
-        return (self.x_intercept, y_intercept, z_intercept, -phi, -theta, -psi)
+        return intercept_position
 
 
     def kick(self):
