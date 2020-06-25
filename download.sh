@@ -16,6 +16,7 @@ matplotlib
 imutils
 opencv-python
 rospkg
+pyrealsense2
 " > $output
 pip3 install -r requirements.txt
 rm -f requirements.txt
