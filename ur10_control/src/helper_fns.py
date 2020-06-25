@@ -26,7 +26,7 @@ class ball_projectile():
         self.time_step = time_step
         self.skipped_frames = skipped_frames
         self.time_between_frames = skipped_frames* time_step
-        self.current_time = 0
+        self.current_time = time_step
 
         self.window_limit_y = [-1,1]
         self.window_limit_z = [-1,1]
@@ -58,9 +58,22 @@ class ball_projectile():
         self.vy = (y2-y1)/self.time_between_frames
         self.vz = (z2-z1)/self.time_between_frames
 
-        magnitude = np.sqrt(self.vx**2 + self.vy**2 + self.vz**2)
+        self.append_data()
 
-        return magnitude, [vx/magnitude,vy/magnitude,vz/magnitude]
+
+    def get_velocity(self, pose): 
+
+        x1,y1,z1 = self.ball_position
+        x2,y2,z2 = pose
+
+        vx = (x2-x1)/self.time_between_frames
+        vy = (y2-y1)/self.time_between_frames
+        vz = (z2-z1)/self.time_between_frames
+
+        return vx, vy , vz 
+
+
+
 
     def get_trajectory_intercept(self):
 
@@ -107,6 +120,25 @@ class ball_projectile():
 
     def step(self, pose):
         #update velocity and position of ball 
+        
+        self.ball_position = pose
+        self.vx, self.vy, self.vz = self.get_velocity(pose)
+        self.append_data()
+        self.current_time += self.time_step
+
+    
+    def ball_closing(self):
+        if self.vx < 0: 
+            coming = True
+
+        else: 
+            coming = False
+
+        return coming
+
+
+
+
 
 
 
