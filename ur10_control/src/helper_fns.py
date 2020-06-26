@@ -140,7 +140,7 @@ class ball_projectile():
 
     def control(self, kick = False): 
         #control velocty
-        y_intercept, z_intercept, time_to_plane = get_trajectory_intercept(self)
+        y_intercept, z_intercept, time_to_plane = self.get_trajectory_intercept()
         vx= self.vx 
         vy= self.vy
         vz= z_intercept+ 0.5 * (self.az) * time_to_plane**2
