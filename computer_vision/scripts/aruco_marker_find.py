@@ -2,6 +2,7 @@ import numpy  as np
 import cv2
 import cv2.aruco as aruco
 import math, time 
+import os
 class Aruco_Marker_Find():
     def __init__(self, id_to_find = 7, marker_size = 8.5):
 
@@ -14,7 +15,8 @@ class Aruco_Marker_Find():
 
         self.marker_size = marker_size
         self.id_to_find = id_to_find
-
+        self.script_path = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(self.script_path)
         self._camera_matrix = np.loadtxt('cameraMatrix.txt', delimiter=',')
         self._camera_distortion = np.loadtxt('cameraDistortion.txt', delimiter=',') 
 

@@ -1,16 +1,63 @@
+#!/usr/bin/env python3
+# license removed for brevity
+
 from real_sense import RealSense, FPS
-from aruco_marker_find import Aruco_Marker_Find
 import numpy as np
 import rospy
 from geometry_msgs.msg import Point
+import cv2
 
-D435 = RealSense()
-# D435.collect_images(number_of_images = 3, folder = 'HSV_get')
-
-D435.track_ball()
-
+D435 = RealSense() # Init the object for working with the camera
+# D435.collect_images(number_of_images = 3, folder = 'HSV_get') # THis may be needed for HSV adjusting
 
 
+
+# Tracking the ball
+
+
+def talker():
+    pub = rospy.Publisher('ball_position_pub', Point, queue_size=10)
+    rospy.init_node('talker', anonymous=True)
+    rate = rospy.Rate(10) # 10hz
+
+    #define color boundary of the ball in HSV space
+    ball_boundary = ([100, 174, 105], [109, 255, 255]) 
+    
+    # Tag offset wrt base
+    tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
+
+    fps = FPS()
+
+    while not rospy.is_shutdown():
+        result = D435.track_ball()
+        if result != None:
+            ball_pos, depth_image, color_image = result
+            # print(ball_pos_wrt_robot_frame)
+            # print('distance from the robot to the ball:', np.sqrt(ball_pos_wrt_robot_frame[0]**2+ball_pos_wrt_robot_frame[1]**2+ball_pos_wrt_robot_frame[2]**2))
+            # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
+            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.2), cv2.COLORMAP_JET)
+            color_image = cv2.resize(color_image,None, fx = D435.resize_ratio,fy= D435.resize_ratio,interpolation = cv2.INTER_CUBIC)
+            depth_colormap = cv2.resize(depth_colormap,None, fx=D435.resize_ratio,fy=D435.resize_ratio, interpolation=cv2.INTER_CUBIC)
+            cv2.putText(color_image,'fps = '+str(int(fps.get())),(40,30),cv2.FONT_HERSHEY_SIMPLEX,1,(0,0,0))
+            images = np.hstack((color_image, depth_colormap))
+            # Show images
+            cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow('RealSense', images)
+            fps.update()
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+
+            rospy.loginfo([float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0])])
+            pub.publish(float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]))
+        rate.sleep()
+
+if __name__ == '__main__':
+    try:
+        talker()
+    except rospy.ROSInterruptException:
+        # Stop streaming
+        D435.pipeline.stop()
+        pass
 
 
 
