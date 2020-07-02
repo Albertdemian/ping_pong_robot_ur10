@@ -73,7 +73,7 @@ class RealSense():
     
         # Tag offset wrt base
         self.tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
-
+        self.tag_check = False
     def track_ball(self):
         # Wait for a coherent pair of frames: depth and color
         frames = self.pipeline.wait_for_frames()
@@ -102,8 +102,13 @@ class RealSense():
 
 
         tag_result = Aruco_Marker.track(color_image)
-        if tag_result != None and ball_coords != None:
-            color_image, R_ct, (tag_x, tag_y, tag_z) = tag_result
+        # Check if the camera catched the tag
+        if tag_result != None and self.tag_check == False:
+            tag_result_updated = tag_result
+            self.tag_check = True
+
+        if tag_result_updated != None and ball_coords != None:
+            color_image, R_ct, (tag_x, tag_y, tag_z) = tag_result_updated
             H_ct = np.array([[R_ct[0,0], R_ct[0,1], R_ct[0,2], tag_x],
                             [R_ct[1,0], R_ct[1,1], R_ct[1,2], tag_y],
                             [R_ct[2,0], R_ct[2,1], R_ct[2,2], tag_z],
