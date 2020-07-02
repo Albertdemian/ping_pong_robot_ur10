@@ -3,8 +3,12 @@ import numpy as np
 import cv2
 import time 
 import imutils
-from collections import deque
 import os 
+import  matplotlib.pyplot as plt
+from aruco_marker_find import Aruco_Marker_Find
+
+import rospy
+from geometry_msgs.msg import Point
 
 class FPS():
     def __init__(self):
@@ -29,7 +33,10 @@ class RealSense():
         self.center_line_thickness = 4
 
         self.resize_ratio = 1
-
+        self.camera_matrix = [[462.301, 0, 302.545],
+                            [0, 462.206, 185.762],
+                            [0,0,1]]
+        self.distortion_coeffs = [0,0,0,0,0]
         fps = 60 # set desired FPS
         
         # available resolutions = (640,360),(640,400),(640,480),(848.100),(848,480),(1280,720),(1280,800)
@@ -55,13 +62,26 @@ class RealSense():
         align_to = rs.stream.color
         self.align = rs.align(align_to)
 
-    def track_ball(self, buffer_size = 64):
-        self. marker_wrt_robot_pos = np.array([1.073,53.3/1000, 229.2/1000],dtype = float)
+        # Init a class in order to track an Aruco Marker
+    def track_ball(self):
+        # Initialize a class for finding the aruco marker
+        Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 8.5)
+
+        # Initialize a ROS Publisher
+        
+        pub = rospy.Publisher('ball_bos_publisher', Point, queue_size=10)
+        rospy.init_node('xyz_ball_pos', anonymous=True)
+        rate = rospy.Rate(10) # 10hz
+
         #define color boundaries in HSV space
-        self.ball_boundary = ([75, 125, 0], [150, 255, 255]) 
-        self.marker_boundary =  ([0, 211, 65], [3, 255, 255]) 
+        # self.ball_boundary = ([100, 110, 111], [108, 255, 255]) 
+        # self.marker_boundary =  ([0, 137, 170], [255, 255, 255]) 
+        self.ball_boundary = ([100, 174, 105], [109, 255, 255]) 
+        
+        # Tag offset wrt base
+        tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
+
         fps = FPS()
-        pts = deque(maxlen=buffer_size)
         while True:
             # Wait for a coherent pair of frames: depth and color
             frames = self.pipeline.wait_for_frames()
@@ -85,26 +105,36 @@ class RealSense():
             depth_image = np.asanyarray(depth_frame.get_data())
             color_image = np.asanyarray(color_frame.get_data())
             #isolate colors based on boundaries 
-            color_image, ball_coords = self.color_tracker(self.ball_boundary, pts, color_image, depth_frame, depth_intrin, object = 'ball')
-            #find marker
-            color_image, marker_coords = self.color_tracker(self.marker_boundary, pts, color_image, depth_frame, depth_intrin, object='marker')
+            color_image, ball_coords = self.color_tracker(self.ball_boundary, color_image, depth_frame, depth_intrin)
 
-            # extract a plane for marker circles coordinates
-            if marker_coords != None and ball_coords != None:
-                if len(marker_coords) > 3:
-                    plane_params = self.equation_plane(marker_coords[0], marker_coords[1], marker_coords[2])
-                    marker_center_point = self.find_center_point(marker_coords)
-                    if marker_center_point != None:
-                        ball_wrt_marker_pos = [(-marker_center_point[i] + ball_coords[i]) for i in range(0,len(marker_center_point))]
-                        # print(ball_wrt_marker_pos)
-                        # print(np.sqrt(round(ball_wrt_marker_pos[0]**2 + ball_wrt_marker_pos[1]**2 + ball_wrt_marker_pos[2]**2,2)))
-                        marker_normal_vector_length = np.sqrt(plane_params[0]**2+plane_params[1]**2+plane_params[2]**2)
-                        marker_plane_orientation = [np.arccos(plane_params[i]/marker_normal_vector_length) for i in range(3)]
-                        ball_wrt_marker_pos = np.linalg.multi_dot([self.rotx(-marker_plane_orientation[0]),self.roty(-marker_plane_orientation[1]),self.rotz(-marker_plane_orientation[2]),np.array(ball_wrt_marker_pos)]) 
-                        # print(ball_wrt_marker_pos)
-                        ball_wrt_robot_pos = self.marker_wrt_robot_pos - np.dot(self.roty(-np.pi/2), ball_wrt_marker_pos)
-                        print(ball_wrt_robot_pos)
 
+
+
+            tag_result = Aruco_Marker.track(color_image)
+            if tag_result != None and ball_coords != None:
+                color_image, R_ct, (tag_x, tag_y, tag_z) = tag_result
+                H_ct = np.array([[R_ct[0,0], R_ct[0,1], R_ct[0,2], tag_x],
+                                [R_ct[1,0], R_ct[1,1], R_ct[1,2], tag_y],
+                                [R_ct[2,0], R_ct[2,1], R_ct[2,2], tag_z],
+                                [0,0,0,1]], dtype = float)
+
+                H_tr = np.array([[1,0,0, tag_offset_r[0]],
+                                [0,1,0, tag_offset_r[1]],
+                                [0,0,1, tag_offset_r[2]],
+                                [0,0,0,1]], dtype = float)
+
+                H_cr = np.dot(H_tr, H_ct)
+               
+
+                ball_pos_wrt_robot_frame = np.dot(H_cr, np.array([[ball_coords[0]],
+                [ball_coords[1]],
+                [ball_coords[2]],
+                [1]]))
+                # print(ball_pos_wrt_robot_frame)
+                # print('distance from the robot to the ball:', np.sqrt(ball_pos_wrt_robot_frame[0]**2+ball_pos_wrt_robot_frame[1]**2+ball_pos_wrt_robot_frame[2]**2))
+
+                pub.publish(ball_pos_wrt_robot_frame[0:3])
+                rate.sleep()
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.2), cv2.COLORMAP_JET)
             color_image = cv2.resize(color_image,None, fx = self.resize_ratio,fy= self.resize_ratio,interpolation = cv2.INTER_CUBIC)
@@ -120,77 +150,35 @@ class RealSense():
         # Stop streaming
         self.pipeline.stop()   
 
-    def rotx(self,q):
-        Rx = np.array([[1,         0,          0],
-                    [0, np.cos(q), -np.sin(q)],
-                    [0, np.sin(q),  np.cos(q)]], dtype = float)
-        return Rx
-
-    def roty(self,q):
-        Ry = np.array([[ np.cos(q), 0, np.sin(q)],
-                    [         0, 1,         0],
-                    [-np.sin(q), 0, np.cos(q)]], dtype = float)
-        return Ry
-
-    def rotz(self,q):
-        Rz = np.array([[np.cos(q), -np.sin(q),   0],
-                    [np.sin(q),  np.cos(q),   0],
-                    [        0,            0, 1]], dtype = float)
-        return Rz
-
-    def trotx(self,q):
-        Tx = np.array([[1,         0,          0, 0],
-                    [0, np.cos(q), -np.sin(q), 0],
-                    [0, np.sin(q),  np.cos(q), 0],
-                    [0,         0,          0, 1]], dtype = float)
-        return Tx
-
-    def troty(self,q):
-        Ty = np.array([[ np.cos(q), 0, np.sin(q),  0],
-                    [         0, 1,         0,  0],
-                    [-np.sin(q), 0, np.cos(q),  0],
-                    [         0, 0,         0,  1]], dtype = float)
-        return Ty
-
-    def trotz(self,q):
-        Tz = np.array([[np.cos(q), -np.sin(q),   0, 0],
-                    [np.sin(q),  np.cos(q),   0, 0],
-                    [        0,            0, 1, 0],
-                    [        0,            0, 0, 1]], dtype = float)
-        return Tz
-    # Function to find equation of plane. 
-    def equation_plane(self, P1, P2, P3): 
-        x1,y1,z1 = P1
-        x2,y2,z2 = P2
-        x3,y3,z3 = P3
-        '''
-        a*x + b*y + c*z +d = 0
-        '''
-        a1 = x2 - x1 
-        b1 = y2 - y1 
-        c1 = z2 - z1 
-        a2 = x3 - x1 
-        b2 = y3 - y1 
-        c2 = z3 - z1 
-        a = b1 * c2 - b2 * c1 
-        b = a2 * c1 - a1 * c2 
-        c = a1 * b2 - b1 * a2 
-        d = (- a * x1 - b * y1 - c * z1)
-        # print ("equation of plane is ", a, "x +", b, "y +",c, "z +", d, "= 0.") 
-        return (a,b,c,d) 
-    def find_center_point(self, points):
-        # point = (x,y,z)
-        xs = [point[0] for point in points]
-        ys =  [point[1] for point in points]
+    def find_marker_frame(self, center_point, normal_vector, marker_coords):
+        xs = [point[0] for point in marker_coords]
+        ys =  [point[1] for point in marker_coords]
+        zs =  [point[2] for point in marker_coords]
         x_min = min(xs)
-        x_max = max(xs)
-        y_min = min(ys)
-        for point in points:
-            if point[0] > x_min and point[0]<x_max and point[1] > y_min:
-                return point
-        return None
-        
-    def color_tracker(self, boundary, pts, image, depth_frame, depth_intrin, object = 'ball'):
+        if center_point != None:
+            for point in marker_coords:
+                if point[0] == x_min:
+                    left_circle_center = point
+            center_to_left_circle_vector = [left_circle_center[i]-center_point[i] for i in range(3)]
+
+            center_to_left_circle_vector_length = np.sqrt(center_to_left_circle_vector[0]**2 + center_to_left_circle_vector[1]**2 + center_to_left_circle_vector[2]**2)
+            
+            center_to_left_circle_vector = [center_to_left_circle_vector[i]/ center_to_left_circle_vector_length for i in range(3)]
+
+            normal_vector_length = np.sqrt(normal_vector[0]**2 + normal_vector[1]**2 + normal_vector[2]**2)
+
+            normal_vector = [normal_vector[i]/normal_vector_length for i in range(3)]
+
+            z_axes = np.linalg.multi_dot([self.roty(np.pi/2), self.rotz(-np.pi/2),normal_vector])
+
+            x_axes = np.linalg.multi_dot([self.roty(np.pi/2), self.rotz(-np.pi/2),np.array([center_to_left_circle_vector[i]*np.cos(np.pi/4) for i in range(3)], dtype = float)])
+
+            y_axes = np.linalg.multi_dot([self.roty(np.pi/2), self.rotz(-np.pi/2),np.cross(z_axes,x_axes)])
+            return (x_axes, y_axes, z_axes)
+        else: 
+            return None
+    
+    def color_tracker(self, boundary, image, depth_frame, depth_intrin):
         # create NumPy arrays from the boundaries
         lower = np.array(boundary[0], dtype = "uint8")
         upper = np.array(boundary[1], dtype = "uint8")
@@ -214,51 +202,27 @@ class RealSense():
         center = None
         # only proceed if at least one contour was found
         if len(cnts) > 0:
-            if object == 'ball':
-                # find the largest contour in the mask, then use
-                # it to compute the minimum enclosing circle and
-                # centroid
-                c = max(cnts, key=cv2.contourArea)
-                ((x, y), radius) = cv2.minEnclosingCircle(c)
-                M = cv2.moments(c)
-                center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-                # only proceed if the radius meets a minimum size
-                if radius > 0:
-                    # draw the circle and centroid on the frame,
-                    # then update the list of tracked points
-                    cv2.circle(image, (int(x), int(y)), int(radius),
-                        self.ball_contour_color, 2)
-                    ball_coords = (int(x), int(y))
+            # find the largest contour in the mask, then use
+            # it to compute the minimum enclosing circle and
+            # centroid
+            c = max(cnts, key=cv2.contourArea)
+            ((x, y), radius) = cv2.minEnclosingCircle(c)
+            M = cv2.moments(c)
+            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            # only proceed if the radius meets a minimum size
+            if radius > 0:
+                # draw the circle and centroid on the frame,
+                # then update the list of tracked points
+                cv2.circle(image, (int(x), int(y)), int(radius),
+                    self.ball_contour_color, 2)
+                ball_coords = (int(x), int(y))
 
-                    depth = depth_frame.get_distance(ball_coords[0],ball_coords[1])
-                    depth_point = rs.rs2_deproject_pixel_to_point(
-                                        depth_intrin, [ball_coords[0],ball_coords[1]], depth)
-                    cv2.putText(image,'Ball pos: '+str(round(depth_point[0],2)) +' ' + str(round(depth_point[1],2)) + ' ' + str(round(depth_point[2],2)),(ball_coords[0]-int(2*radius),ball_coords[1]+int(1.2*radius)),cv2.FONT_HERSHEY_SIMPLEX ,0.5,(0,0,0))
-                    cv2.putText(image,'Ball distance: '+str(round(np.sqrt(depth_point[0]**2+ depth_point[1]**2+depth_point[2]**2),2)) + ' m',(ball_coords[0]-int(2*radius),ball_coords[1]+int(2.2*radius)),cv2.FONT_HERSHEY_SIMPLEX ,0.5,(0,0,0))
-                    return image, depth_point
-            elif object == 'marker':
-                marker_coords = []
-                for c in cnts:
-                    ((x, y), radius) = cv2.minEnclosingCircle(c)
-                    M = cv2.moments(c)
-                    center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-                    # only proceed if the radius meets a minimum size
-                    if radius > 0:
-                        # draw the circle and centroid on the frame,
-                        # then update the list of tracked points
-                        cv2.circle(image, (int(x), int(y)), int(radius),
-                            self.marker_contour_color, 2)
-                        marker_coord = (int(x), int(y))
-
-                        depth = depth_frame.get_distance(marker_coord[0],marker_coord[1])
-                        depth_point = rs.rs2_deproject_pixel_to_point(
-                                            depth_intrin, [marker_coord[0],marker_coord[1]], depth)
-                        cv2.putText(image,'marker pos: '+str(round(depth_point[0],2)) +' ' + str(round(depth_point[1],2)) + ' ' + str(round(depth_point[2],2)),(marker_coord[0]-int(2*radius),marker_coord[1]+int(1.2*radius)),cv2.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,0))
-                        # cv2.putText(image,'marker distance: '+str(round(np.sqrt(depth_point[0]**2+ depth_point[1]**2+depth_point[2]**2),2)) + ' m',(marker_coord[0]-int(2*radius),marker_coord[1]+int(2.2*radius)),cv2.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,0))
-                        marker_coords.append(depth_point)
-                return image, marker_coords
-        # update the points queue
-        # pts.appendleft(center)
+                depth = depth_frame.get_distance(ball_coords[0],ball_coords[1])
+                depth_point = rs.rs2_deproject_pixel_to_point(
+                                    depth_intrin, [ball_coords[0],ball_coords[1]], depth)
+                cv2.putText(image,'Ball pos: '+str(round(depth_point[0],2)) +' ' + str(round(depth_point[1],2)) + ' ' + str(round(depth_point[2],2)),(ball_coords[0]-int(2*radius),ball_coords[1]+int(1.2*radius)),cv2.FONT_HERSHEY_SIMPLEX ,0.5,(0,0,0))
+                cv2.putText(image,'Ball distance: '+str(round(np.sqrt(depth_point[0]**2+ depth_point[1]**2+depth_point[2]**2),2)) + ' m',(ball_coords[0]-int(2*radius),ball_coords[1]+int(2.2*radius)),cv2.FONT_HERSHEY_SIMPLEX ,0.5,(0,0,0))
+                return image, depth_point
         return image, None
 
 
