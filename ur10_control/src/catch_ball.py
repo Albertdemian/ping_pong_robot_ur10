@@ -41,8 +41,12 @@ while not rospy.is_shutdown():  # and len(ball_poses)<2:
     ball_x = ball_pose[0]
     ball_y = ball_pose[1]
     ball_z = ball_pose[2]
+    
+    if rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False)> 0.01:
+        rob.speedl([ball_x-x,ball_y - y, ball_z -z,0,0,0], 1,0.15)
 
-    rob.speedl([ball_x-x,ball_y - y, ball_z -z,0,0,0], 1,0.15)
+    elif rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False) < 0.01: 
+        rob.stopl(5)
 
 
 
