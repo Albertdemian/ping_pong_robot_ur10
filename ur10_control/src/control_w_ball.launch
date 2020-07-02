@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+
+<launch>
+
+  <node name="UR10" pkg="ur10_control" type="robot_state.py"/>
+
+  
+</launch>

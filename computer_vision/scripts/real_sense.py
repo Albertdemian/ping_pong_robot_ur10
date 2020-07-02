@@ -12,7 +12,7 @@ from aruco_marker_find import Aruco_Marker_Find
 import rospy
 from geometry_msgs.msg import Point
 
-Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 8.5)
+Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 10)
 
 class FPS():
     def __init__(self):
@@ -69,10 +69,10 @@ class RealSense():
         # Some parameters for tracking
 
         #define color boundary of the ball in HSV space
-        self.ball_boundary = ([100, 174, 105], [109, 255, 255]) 
+        self.ball_boundary = ([100, 138, 64], [108, 246, 111]) 
     
         # Tag offset wrt base
-        self.tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
+        self.tag_offset_r = np.array([0.298, -0.294, -0.11], dtype = float) #[cm]
 
     def track_ball(self):
         # Wait for a coherent pair of frames: depth and color
