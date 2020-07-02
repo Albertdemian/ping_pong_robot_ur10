@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# license removed for brevity
 import pyrealsense2 as rs
 import numpy as np
 import cv2
@@ -9,6 +11,8 @@ from aruco_marker_find import Aruco_Marker_Find
 
 import rospy
 from geometry_msgs.msg import Point
+
+Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 8.5)
 
 class FPS():
     def __init__(self):
@@ -62,93 +66,64 @@ class RealSense():
         align_to = rs.stream.color
         self.align = rs.align(align_to)
 
-        # Init a class in order to track an Aruco Marker
-    def track_ball(self):
-        # Initialize a class for finding the aruco marker
-        Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 8.5)
+        # Some parameters for tracking
 
-        # Initialize a ROS Publisher
-        
-        pub = rospy.Publisher('ball_bos_publisher', Point, queue_size=10)
-        rospy.init_node('xyz_ball_pos', anonymous=True)
-        rate = rospy.Rate(10) # 10hz
-
-        #define color boundaries in HSV space
-        # self.ball_boundary = ([100, 110, 111], [108, 255, 255]) 
-        # self.marker_boundary =  ([0, 137, 170], [255, 255, 255]) 
+        #define color boundary of the ball in HSV space
         self.ball_boundary = ([100, 174, 105], [109, 255, 255]) 
-        
+    
         # Tag offset wrt base
-        tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
+        self.tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
 
-        fps = FPS()
-        while True:
-            # Wait for a coherent pair of frames: depth and color
-            frames = self.pipeline.wait_for_frames()
+    def track_ball(self):
+        # Wait for a coherent pair of frames: depth and color
+        frames = self.pipeline.wait_for_frames()
 
-            # Align the depth frame to color frame
-            aligned_frames = self.align.process(frames)
+        # Align the depth frame to color frame
+        aligned_frames = self.align.process(frames)
 
-            depth_frame = aligned_frames.get_depth_frame()
-            color_frame = aligned_frames.get_color_frame()
-            if not depth_frame or not color_frame:
-                continue
+        depth_frame = aligned_frames.get_depth_frame()
+        color_frame = aligned_frames.get_color_frame()
+        if not depth_frame or not color_frame:
+            pass
+        # Intrinsics & Extrinsics
+        depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
+        color_intrin = color_frame.profile.as_video_stream_profile().intrinsics
+        depth_to_color_extrin = depth_frame.profile.get_extrinsics_to(
+            color_frame.profile)
+        #calculate pointcloud from frames
 
-            # Intrinsics & Extrinsics
-            depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
-            color_intrin = color_frame.profile.as_video_stream_profile().intrinsics
-            depth_to_color_extrin = depth_frame.profile.get_extrinsics_to(
-                color_frame.profile)
-            #calculate pointcloud from frames
-
-            # Convert images to numpy arrays
-            depth_image = np.asanyarray(depth_frame.get_data())
-            color_image = np.asanyarray(color_frame.get_data())
-            #isolate colors based on boundaries 
-            color_image, ball_coords = self.color_tracker(self.ball_boundary, color_image, depth_frame, depth_intrin)
+        # Convert images to numpy arrays
+        depth_image = np.asanyarray(depth_frame.get_data())
+        color_image = np.asanyarray(color_frame.get_data())
+        #isolate colors based on boundaries 
+        color_image, ball_coords = self.color_tracker(self.ball_boundary, color_image, depth_frame, depth_intrin)
 
 
 
 
-            tag_result = Aruco_Marker.track(color_image)
-            if tag_result != None and ball_coords != None:
-                color_image, R_ct, (tag_x, tag_y, tag_z) = tag_result
-                H_ct = np.array([[R_ct[0,0], R_ct[0,1], R_ct[0,2], tag_x],
-                                [R_ct[1,0], R_ct[1,1], R_ct[1,2], tag_y],
-                                [R_ct[2,0], R_ct[2,1], R_ct[2,2], tag_z],
-                                [0,0,0,1]], dtype = float)
+        tag_result = Aruco_Marker.track(color_image)
+        if tag_result != None and ball_coords != None:
+            color_image, R_ct, (tag_x, tag_y, tag_z) = tag_result
+            H_ct = np.array([[R_ct[0,0], R_ct[0,1], R_ct[0,2], tag_x],
+                            [R_ct[1,0], R_ct[1,1], R_ct[1,2], tag_y],
+                            [R_ct[2,0], R_ct[2,1], R_ct[2,2], tag_z],
+                            [0,0,0,1]], dtype = float)
 
-                H_tr = np.array([[1,0,0, tag_offset_r[0]],
-                                [0,1,0, tag_offset_r[1]],
-                                [0,0,1, tag_offset_r[2]],
-                                [0,0,0,1]], dtype = float)
+            H_tr = np.array([[1,0,0, self.tag_offset_r[0]],
+                            [0,1,0, self.tag_offset_r[1]],
+                            [0,0,1, self.tag_offset_r[2]],
+                            [0,0,0,1]], dtype = float)
 
-                H_cr = np.dot(H_tr, H_ct)
-               
+            H_cr = np.dot(H_tr, H_ct)
+            
 
-                ball_pos_wrt_robot_frame = np.dot(H_cr, np.array([[ball_coords[0]],
-                [ball_coords[1]],
-                [ball_coords[2]],
-                [1]]))
-                # print(ball_pos_wrt_robot_frame)
-                # print('distance from the robot to the ball:', np.sqrt(ball_pos_wrt_robot_frame[0]**2+ball_pos_wrt_robot_frame[1]**2+ball_pos_wrt_robot_frame[2]**2))
-
-                pub.publish(ball_pos_wrt_robot_frame[0:3])
-                rate.sleep()
-            # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.2), cv2.COLORMAP_JET)
-            color_image = cv2.resize(color_image,None, fx = self.resize_ratio,fy= self.resize_ratio,interpolation = cv2.INTER_CUBIC)
-            depth_colormap = cv2.resize(depth_colormap,None, fx=self.resize_ratio,fy=self.resize_ratio, interpolation=cv2.INTER_CUBIC)
-            cv2.putText(color_image,'fps = '+str(int(fps.get())),(40,30),cv2.FONT_HERSHEY_SIMPLEX,1,(0,0,0))
-            images = np.hstack((color_image, depth_colormap))
-            # Show images
-            cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-            cv2.imshow('RealSense', images)
-            fps.update()
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
-        # Stop streaming
-        self.pipeline.stop()   
+            ball_pos_wrt_robot_frame = np.dot(H_cr, np.array([[ball_coords[0]],
+            [ball_coords[1]],
+            [ball_coords[2]],
+            [1]]))
+            return ball_pos_wrt_robot_frame, depth_image, color_image   
+        else:
+            return None
 
     def find_marker_frame(self, center_point, normal_vector, marker_coords):
         xs = [point[0] for point in marker_coords]
