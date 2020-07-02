@@ -123,7 +123,7 @@ class RealSense():
             [1]]))
             return ball_pos_wrt_robot_frame, depth_image, color_image   
         else:
-            return None
+            return [None, None, None], depth_image, color_image
 
     def find_marker_frame(self, center_point, normal_vector, marker_coords):
         xs = [point[0] for point in marker_coords]
