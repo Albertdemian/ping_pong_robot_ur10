@@ -157,8 +157,18 @@ class ball_projectile():
         return intercept_position
 
 
-    def kick(self):
-        pass
+    def kick(self, a_robot):
+        #calculating the distance from the plane inorder to kick the ball at the right time
+        y_intercept, z_intercept, time_to_plane = get_trajectory_intercept(self)
+        d_x= -0.5 * a_robot * time_to_plane**2 + 0.5
+        d_y= -0.5 * a_robot * time_to_plane**2 + y_intercept
+        d_z= -0.5 * a_robot * time_to_plane**2 + z_intercept
+        d_vx= np.sqrt(2 * a_robot * d_x)
+        d_vy= np.sqrt(2 * a_robot * d_y)
+        d_vz= np.sqrt(2 * a_robot * d_z)
+        d_magnitude= np.sqrt(d_x**2 + d_y**2 + d_z**2)
+        
+
 
 
     def reset(self): 
