@@ -97,11 +97,11 @@ v = 0.2
 
 rob = urx.Robot("172.31.1.3")
 rob.set_tcp((0, 0, 0, 0, 0, 0))
-rob.set_payload(0.5, (0, 0, 0.05))
-sleep(0.5)  #leave some time to robot to process the setup commands
+rob.set_payload(0.5, (0, 0, 0.0))
+sleep(1)  #leave some time to robot to process the setup commands
 
 rospy.init_node("ur10_commander")
-r = rospy.Rate(10)
+r = rospy.Rate(60)
 
 cartesian_sub = rospy.Subscriber("/cartesian_controller/parameter_updates", Config, cartes_callback )
 joints_sub  = rospy.Subscriber("/Joint_controller/parameter_updates", Config, pos_callback)

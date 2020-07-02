@@ -19,8 +19,7 @@ do_wait = True
 
 rob = urx.Robot("172.31.1.3")
 rob.set_tcp((0, 0, 0, 0, 0, 0))
-rob.set_payload(0.5, (0, 0, 0.05))
-sleep(0.5)  #leave some time to robot to process the setup commands
+sleep(1)  #leave some time to robot to process the setup commands
 
 
 
@@ -29,7 +28,7 @@ def talker():
     robot_state_pub  = rospy.Publisher('end_effector_position', Floats, queue_size=10)
 
     rospy.init_node('UR10', anonymous=True)
-    r = rospy.Rate(10) # 10hz
+    r = rospy.Rate(60) # 60hz
 
     while not rospy.is_shutdown():
         joints_pos = rob.getj()

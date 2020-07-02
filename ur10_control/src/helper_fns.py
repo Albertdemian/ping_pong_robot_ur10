@@ -174,10 +174,3 @@ class ball_projectile():
         self.xs = []
         self.ys = []
         self.zs = []
-
-         
-
-
-
-
-
