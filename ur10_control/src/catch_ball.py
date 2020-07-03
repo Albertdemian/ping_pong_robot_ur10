@@ -40,7 +40,7 @@ def check_bounds(ball_pose, xlim=[0.8, 1], ylim=[-0.8,0.8], zlim=[-0.5, 1]):
     return within_bounds
 
 rob = urx.Robot("172.31.1.3")
-rob.set_tcp((0, 0, 0.20, 0, 0, 0))
+rob.set_tcp((0, 0, 0.185, 0, 0, 0))
 sleep(1)  #leave some time to robot to process the setup commands
 
 cartesian_pos = Floats()
