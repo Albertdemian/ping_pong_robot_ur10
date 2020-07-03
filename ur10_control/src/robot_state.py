@@ -18,7 +18,7 @@ do_wait = True
 
 
 rob = urx.Robot("172.31.1.3")
-rob.set_tcp((0, 0, 0, 0, 0, 0))
+rob.set_tcp((0, 0, 0.15, 0, 0, 0))
 sleep(1)  #leave some time to robot to process the setup commands
 
 

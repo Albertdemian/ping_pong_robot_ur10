@@ -11,8 +11,36 @@ from numpy import deg2rad, zeros, rad2deg
 import helper_fns
 
 
+
+def check_bounds(ball_pose, xlim=[0.5, 1.4], ylim=[-0.8,0.8], zlim=[-0.5, 1]):
+    x = ball_pose.x
+    y = ball_pose.y
+    z = ball_pose.z 
+
+    if x > xlim[0] and x< xlim[1]: 
+        check_x = True
+    else:
+        check_x = False
+    
+    if y > ylim[0] and y< ylim[1]:
+        check_y = True
+    else:
+        check_y = False
+    
+    if z > zlim[0] and z< zlim[1]:
+        check_z = True 
+    else:
+        check_z = False
+
+    if check_x and check_y and check_z:
+        within_bounds = True
+    else: 
+        within_bounds = False
+
+    return within_bounds
+
 rob = urx.Robot("172.31.1.3")
-rob.set_tcp((0, 0, 0.15, 0, 0, 0))
+rob.set_tcp((0, 0, 0.20, 0, 0, 0))
 sleep(1)  #leave some time to robot to process the setup commands
 
 cartesian_pos = Floats()
@@ -54,13 +82,13 @@ while not rospy.is_shutdown():  # and len(ball_poses)<2:
             ball_y = ball_pose.y
             ball_z = ball_pose.z
 
+            if check_bounds(ball_pose):
             
-            
-            if rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False)> 0.005:
-                rob.speedl([ball_x-x-0.05,ball_y - y, ball_z -z,0,0,0], 0.5,0.2)
+                if rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False)> 0.005:
+                    rob.speedl([ball_x-x-0.1,ball_y - y, ball_z -z,0,0,0], 0.5,0.3)
 
-            elif rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False) < 0.005: 
-                rob.stopl(5)
+                elif rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False) < 0.005: 
+                    rob.stopl(5)
 
     except TypeError:
         pass

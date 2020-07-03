@@ -108,11 +108,11 @@ class RealSense():
         tag_result = Aruco_Marker.track(color_image)
         # Check if the camera catched the tag
         if tag_result != None and self.tag_check == False:
-            tag_result_updated = tag_result
+            self.tag_result_updated = tag_result
             self.tag_check = True
 
-        if tag_result_updated != None and ball_coords != None:
-            color_image, R_ct, (tag_x, tag_y, tag_z) = tag_result_updated
+        if ball_coords != None and self.tag_check ==True:
+            _, R_ct, (tag_x, tag_y, tag_z) = self.tag_result_updated
             H_ct = np.array([[R_ct[0,0], R_ct[0,1], R_ct[0,2], tag_x],
                             [R_ct[1,0], R_ct[1,1], R_ct[1,2], tag_y],
                             [R_ct[2,0], R_ct[2,1], R_ct[2,2], tag_z],
