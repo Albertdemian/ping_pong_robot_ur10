@@ -20,11 +20,6 @@ def talker():
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(60) # 10hz
 
-    #define color boundary of the ball in HSV space 
-    
-    # Tag offset wrt base
-    tag_offset_r = np.array([0.33, -0.305, -0.11], dtype = float) #[cm]
-
     fps = FPS()
 
     while not rospy.is_shutdown():

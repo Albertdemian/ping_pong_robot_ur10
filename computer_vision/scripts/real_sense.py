@@ -69,7 +69,7 @@ class RealSense():
         # Some parameters for tracking
 
         #define color boundary of the ball in HSV space
-        self.ball_boundary = ([14, 114, 231], [20, 206, 255])
+        self.ball_boundary = ([0, 185, 184], [18, 255, 255])
     
         # Tag offset wrt base
 
@@ -77,6 +77,8 @@ class RealSense():
 
 
         self.tag_check = False
+
+        self.online_tracker_init_flag = False
 
     def track_ball(self):
         # Wait for a coherent pair of frames: depth and color
@@ -100,6 +102,8 @@ class RealSense():
         depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
         #isolate colors based on boundaries 
+
+        # color_image, ball_coords = self.online_ball_tracker(color_image, depth_frame, depth_intrin, tracker_type = 'CSRT')
         color_image, ball_coords = self.color_tracker(self.ball_boundary, color_image, depth_frame, depth_intrin)
 
 
@@ -161,7 +165,67 @@ class RealSense():
             return (x_axes, y_axes, z_axes)
         else: 
             return None
-    
+    def online_ball_tracker(self, image, depth_frame, depth_intrin, tracker_type = 'CSRT'):
+        '''
+        # Set up tracker.
+        tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+        '''
+        if self.online_tracker_init_flag == False:
+            if tracker_type == 'BOOSTING':
+                self.online_tracker = cv2.TrackerBoosting_create()
+            if tracker_type == 'MIL':
+                self.online_tracker = cv2.TrackerMIL_create()
+            if tracker_type == 'KCF':
+                self.online_tracker = cv2.TrackerKCF_create()
+            if tracker_type == 'TLD':
+                self.online_tracker = cv2.TrackerTLD_create()
+            if tracker_type == 'MEDIANFLOW':
+                self.online_tracker = cv2.TrackerMedianFlow_create()
+            if tracker_type == 'GOTURN':
+                self.online_tracker = cv2.TrackerGOTURN_create()
+            if tracker_type == 'MOSSE':
+                self.online_tracker = cv2.TrackerMOSSE_create()
+            if tracker_type == "CSRT":
+                self.online_tracker = cv2.TrackerCSRT_create()
+            self.online_tracker_init_flag = True
+            print('initialize the ball bounding box, bbox = [x,y,w,h]')
+
+
+            # Uncomment the line below to select a different bounding box
+            bbox = cv2.selectROI(image, False)
+            p1 = (int(bbox[0]), int(bbox[1]))
+            p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+            cv2.rectangle(image, p1, p2, (255,0,0), 2, 1)
+            # Initialize tracker with first frame and bounding box
+            self.ok = self.online_tracker.init(image, bbox)
+            ball_coords = (int(bbox[0]+bbox[2]/2), int(bbox[1]+bbox[3]/2))
+            depth = depth_frame.get_distance(ball_coords[0],ball_coords[1])
+            depth_point = rs.rs2_deproject_pixel_to_point(
+                                depth_intrin, [ball_coords[0],ball_coords[1]], depth)
+            
+        else:
+           
+            # Update tracker
+            self.ok, bbox = self.online_tracker.update(image)
+
+            # Draw bounding box
+            if self.ok:
+                # Tracking success
+                p1 = (int(bbox[0]), int(bbox[1]))
+                p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+                cv2.rectangle(image, p1, p2, (255,0,0), 2, 1)
+                ball_coords = (int(bbox[0]+bbox[2]/2), int(bbox[1]+bbox[3]/2))
+                depth = depth_frame.get_distance(ball_coords[0],ball_coords[1])
+                depth_point = rs.rs2_deproject_pixel_to_point(
+                                    depth_intrin, [ball_coords[0],ball_coords[1]], depth)
+                # Display tracker type on frame
+                cv2.putText(image, tracker_type + " Tracker", (100,20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50),2)
+            else :
+                # Tracking failure
+                cv2.putText(image, "Tracking failure detected", (100,80), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(0,0,255),2)
+                depth_point = None
+        return image, depth_point
+
     def color_tracker(self, boundary, image, depth_frame, depth_intrin):
         # create NumPy arrays from the boundaries
         lower = np.array(boundary[0], dtype = "uint8")
