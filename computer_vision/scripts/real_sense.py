@@ -69,7 +69,7 @@ class RealSense():
         # Some parameters for tracking
 
         #define color boundary of the ball in HSV space
-        self.ball_boundary = ([100, 138, 64], [108, 246, 111]) 
+        self.ball_boundary = ([14, 114, 231], [20, 206, 255])
     
         # Tag offset wrt base
 
@@ -104,11 +104,11 @@ class RealSense():
 
 
 
-
-        tag_result = Aruco_Marker.track(color_image)
+        if self.tag_check == False:
+            self.tag_result = Aruco_Marker.track(color_image)
         # Check if the camera catched the tag
-        if tag_result != None and self.tag_check == False:
-            self.tag_result_updated = tag_result
+        if self.tag_result != None and self.tag_check == False:
+            self.tag_result_updated = self.tag_result
             self.tag_check = True
 
         if ball_coords != None and self.tag_check ==True:

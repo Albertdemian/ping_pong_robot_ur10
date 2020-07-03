@@ -12,7 +12,7 @@ import helper_fns
 
 
 
-def check_bounds(ball_pose, xlim=[0.5, 1.4], ylim=[-0.8,0.8], zlim=[-0.5, 1]):
+def check_bounds(ball_pose, xlim=[0.8, 1], ylim=[-0.8,0.8], zlim=[-0.5, 1]):
     x = ball_pose.x
     y = ball_pose.y
     z = ball_pose.z 
@@ -56,7 +56,7 @@ def ball_callback(position_ball):
     # print("BALL:", ball_pose)
 
 
-
+K = 2
 
 rospy.init_node("catch_ball")
 r = rospy.Rate(60)
@@ -85,10 +85,13 @@ while not rospy.is_shutdown():  # and len(ball_poses)<2:
             if check_bounds(ball_pose):
             
                 if rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False)> 0.005:
-                    rob.speedl([ball_x-x-0.1,ball_y - y, ball_z -z,0,0,0], 0.5,0.3)
+                    rob.speedl([K*(ball_x-x-0.1), K*(ball_y - y), K*(ball_z -z),0,0,0], 3,0.3)
 
                 elif rob._get_dist((ball_x, ball_y, ball_z,0,0,0), False) < 0.005: 
                     rob.stopl(5)
+
+            else: 
+                rob.stopl(5)
 
     except TypeError:
         pass
