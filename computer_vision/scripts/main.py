@@ -30,10 +30,11 @@ def talker():
             # print('distance from the robot to the ball:', np.sqrt(ball_pos_wrt_robot_frame[0]**2+ball_pos_wrt_robot_frame[1]**2+ball_pos_wrt_robot_frame[2]**2))
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             ball_in_a_scene_flag = 1
+            pub.publish(float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]), ball_in_a_scene_flag)
         else:
             ball_in_a_scene_flag = 0
+            pub.publish(0, 0, 0, ball_in_a_scene_flag)
         rospy.loginfo([float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]),ball_in_a_scene_flag])
-        pub.publish(float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]), ball_in_a_scene_flag)
         depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.2), cv2.COLORMAP_JET)
         color_image = cv2.resize(color_image,None, fx = D435.resize_ratio,fy= D435.resize_ratio,interpolation = cv2.INTER_CUBIC)
         depth_colormap = cv2.resize(depth_colormap,None, fx=D435.resize_ratio,fy=D435.resize_ratio, interpolation=cv2.INTER_CUBIC)
