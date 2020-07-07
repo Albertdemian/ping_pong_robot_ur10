@@ -39,6 +39,15 @@ def check_bounds(ball_pose, xlim=[0.7, 1.4], ylim=[-0.6, 0.6], zlim=[-0.15, 1]):
 
     return within_bounds
 
+def interpret_flag(flag): 
+    if flag == 0 :
+        in_scene = False
+    elif flag == 1: 
+        in_scene = True
+
+    return in_scene
+
+
 rob = urx.Robot("172.31.1.3")
 rob.set_tcp((0, 0, 0.185, 0, 0, 0))
 sleep(1)  #leave some time to robot to process the setup commands
@@ -55,6 +64,14 @@ def ball_callback(position_ball):
     ball_pose = position_ball
     print("BALL:", ball_pose)
 
+ball_in_scene_flag = Floats()
+def flag_callback(ball_flag):
+    global ball_in_scene_flag
+    ball_in_scene_flag = ball_flag
+
+
+
+
 
 K = 2
 
@@ -63,7 +80,7 @@ r = rospy.Rate(60)
 
 cartesian_sub  = rospy.Subscriber("/end_effector_position", Floats, cartes_callback)
 ball_pose_sub = rospy.Subscriber("/ball_position_pub", Point,ball_callback )
-
+ball_flag_sub = rospy.Subscriber("/ball_in_a_scene_flag", Floats, flag_callback)
 ball_poses = []
 
 start_time = time.time()
@@ -87,36 +104,40 @@ while not rospy.is_shutdown():
         ball_z = ball_pose.z
 
         cur_time = time.time() - start_time
-        try:
-            trajectory.step([ball_x,ball_y, ball_z], cur_time)
-        except ZeroDivisionError:
-            pass
 
-        # print("class_____: ",trajectory.ball_position)
-        # print("Node _____: ",ball_pose, "\n")
-        # print(len(trajectory.xs), "\n")
+        ball_in_scene = interpret_flag(ball_in_scene_flag)
 
-        if len(trajectory.xs) >2:
-            
-            try: 
-                trajectory.get_velocity([ball_x,ball_y, ball_z])
-                y_inter, z_inter, time_to_plane = trajectory.get_trajectory_intercept()
-                check = trajectory.check_intercept_bounds(y_inter,z_inter)
+        if ball_in_scene: 
+            try:
+                trajectory.step([ball_x,ball_y, ball_z], cur_time)
             except ZeroDivisionError:
                 pass
 
-            pose = trajectory.control(kick=False)
-            # print("flag", pose)
-            # print(check)
+            # print("class_____: ",trajectory.ball_position)
+            # print("Node _____: ",ball_pose, "\n")
+            # print(len(trajectory.xs), "\n")
 
-
-            if check:
-                print("moving")
+            if len(trajectory.xs) >2:
                 
-                rob.speedl([K*(pose[0]-x), K*(pose[1] - y), K*(pose[2] -z),0,0,0], 5,0.3)
+                try: 
+                    trajectory.get_velocity([ball_x,ball_y, ball_z])
+                    y_inter, z_inter, time_to_plane = trajectory.get_trajectory_intercept()
+                    check = trajectory.check_intercept_bounds(y_inter,z_inter)
+                except ZeroDivisionError:
+                    pass
 
-            else: 
-                rob.stopl(5)
+                pose = trajectory.control(kick=False)
+                # print("flag", pose)
+                # print(check)
+
+
+                if check:
+                    print("moving")
+                    
+                    rob.speedl([K*(pose[0]-x), K*(pose[1] - y), K*(pose[2] -z),0,0,0], 5,0.3)
+
+                else: 
+                    rob.stopl(5)
 
     except (TypeError, ZeroDivisionError)  :
         pass

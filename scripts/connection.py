@@ -55,9 +55,14 @@ try:
         _ = wait()
         #rob.speedl([0.5,0.1,0,1.57,0,0], 0.5 , 0.1)
         i=0
-        while i < 10:
 
-            rob.speedl([0,-5,0,0,5,-5], 1,0.15)
+        robot_pos = rob.getl(wait=True)
+        goal = (0.9, 0.1, 0.5,0,0,0)
+
+        while i < 50:
+
+
+            rob.speedl([goal[0]-robot_pos[0],goal[1]-robot_pos[1],goal[2]-robot_pos[2],0,0,0], 1,0.15)
             i+=1
         rob.stopl(acc = 1)
         #time.sleep(2)
