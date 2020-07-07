@@ -106,7 +106,7 @@ r = rospy.Rate(60)
 cartesian_sub = rospy.Subscriber("/cartesian_controller/parameter_updates", Config, cartes_callback )
 joints_sub  = rospy.Subscriber("/Joint_controller/parameter_updates", Config, pos_callback)
 
-
+cur_time = time.time()
 while not rospy.is_shutdown():
 
     #joints_goal = arrange_joints(joints_position)

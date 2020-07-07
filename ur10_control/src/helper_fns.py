@@ -7,7 +7,7 @@ import numpy as np
 
 class ball_projectile():
 
-    def __init__(self, poses = None, time_step = 0.01, skipped_frames = 1):
+    def __init__(self, poses = None,  time_step = 0.01, skipped_frames = 1):
         
         # acceleration components
         self.ax = 0
@@ -19,24 +19,22 @@ class ball_projectile():
         self.vy = 0
         self.vz = 0
 
-        #initialization poses
-        self.pose_1 = poses[0]
-        self.pose_2 = poses[1]
 
         #ball position
-        self.ball_position = self.pose_2
+        self.ball_position = None
+        self.count = 0
 
         # x-axis distance where robot will always recieve the ball
-        self.x_intercept = 0.5
+        self.x_intercept = 0.9
         # y and z limits for the robot to recieve the ball
-        self.window_limit_y = [-1,1]
-        self.window_limit_z = [-1,1]
+        self.window_limit_y = [-0.6,0.6]
+        self.window_limit_z = [-0.15,1]
 
         #time information
         self.time_step = time_step
         self.skipped_frames = skipped_frames
-        self.time_between_frames = skipped_frames* time_step
-        self.current_time = time_step
+        self.time_between_frames = 0
+        self.current_time = 0
 
 
         self.diameter= 0.04
@@ -51,29 +49,17 @@ class ball_projectile():
         self.zs = []
 
 
-    def get_vel_and_dir(self): 
-        #to calculate velocity and direction from frames
 
-        x1,y2,z1 = self.pose_1
-        x2,y2,z2 = self.pose_2
+    def get_velocity(self, pose): 
+
+        x1,y1,z1 = [self.xs[-2], self.ys[-2], self.zs[-2]]
+        x2,y2,z2 = pose
 
         self.vx = (x2-x1)/self.time_between_frames
         self.vy = (y2-y1)/self.time_between_frames
         self.vz = (z2-z1)/self.time_between_frames
 
-        self.append_data()
-
-
-    def get_velocity(self, pose): 
-
-        x1,y1,z1 = self.ball_position
-        x2,y2,z2 = pose
-
-        vx = (x2-x1)/self.time_between_frames
-        vy = (y2-y1)/self.time_between_frames
-        vz = (z2-z1)/self.time_between_frames
-
-        return vx, vy , vz 
+        return self.vx, self.vy , self.vz 
 
 
 
@@ -93,9 +79,13 @@ class ball_projectile():
         
         if y_intercept > self.window_limit_y[0]  and y_intercept < self.window_limit_y[1]:
             within_y = True
+        else: 
+            within_y = False
 
         if z_intercept > self.window_limit_z[1] and z_intercept < self.window_limit_z[1]:
             within_z = True
+        else:
+            within_z = False
 
 
         if within_y and within_z:
@@ -119,13 +109,18 @@ class ball_projectile():
         self.zs.append(self.ball_position[2])
 
 
-    def step(self, pose):
+    def step(self, pose, time):
         #update velocity and position of ball 
-        
+        self.time_between_frames = time
+
+    
         self.ball_position = pose
-        self.vx, self.vy, self.vz = self.get_velocity(pose)
+
+        if len(self.xs) >=2: 
+            self.vx, self.vy, self.vz = self.get_velocity(pose)
+
         self.append_data()
-        self.current_time += self.time_step
+        self.current_time += time
 
     
     def ball_closing(self):
