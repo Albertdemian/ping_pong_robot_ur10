@@ -5,6 +5,7 @@ from real_sense import RealSense, FPS
 import numpy as np
 import rospy
 from geometry_msgs.msg import Point
+from std_msgs.msg       import Float64
 import cv2
 
 D435 = RealSense() # Init the object for working with the camera
@@ -16,25 +17,27 @@ D435 = RealSense() # Init the object for working with the camera
 
 
 def talker():
-    pub = rospy.Publisher('ball_position_pub', Point, queue_size=10)
+    pub_ball = rospy.Publisher('ball_position_pub', Point, queue_size=1)
+    pub_ball_flag = rospy.Publisher('ball_in_a_scene_flag', Float64, queue_size=1)
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(60) # 10hz
 
     fps = FPS()
-
+    
     while not rospy.is_shutdown():
         ball_pos, depth_image, color_image = D435.track_ball()
-        # print(ball_pos)
         if ball_pos[0]!= None:
             # print(ball_pos_wrt_robot_frame)
             # print('distance from the robot to the ball:', np.sqrt(ball_pos_wrt_robot_frame[0]**2+ball_pos_wrt_robot_frame[1]**2+ball_pos_wrt_robot_frame[2]**2))
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             ball_in_a_scene_flag = 1
-            pub.publish(float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]), ball_in_a_scene_flag)
+            pub_ball_flag.publish(ball_in_a_scene_flag)
+            rospy.loginfo([float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0])])
+            pub_ball.publish(float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]))
         else:
             ball_in_a_scene_flag = 0
-            pub.publish(0, 0, 0, ball_in_a_scene_flag)
-        rospy.loginfo([float(ball_pos[0]), float(ball_pos[1,0]), float(ball_pos[2,0]),ball_in_a_scene_flag])
+            pub_ball_flag.publish(ball_in_a_scene_flag)
+        rospy.loginfo([ball_in_a_scene_flag])
         depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.2), cv2.COLORMAP_JET)
         color_image = cv2.resize(color_image,None, fx = D435.resize_ratio,fy= D435.resize_ratio,interpolation = cv2.INTER_CUBIC)
         depth_colormap = cv2.resize(depth_colormap,None, fx=D435.resize_ratio,fy=D435.resize_ratio, interpolation=cv2.INTER_CUBIC)
