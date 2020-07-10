@@ -3,9 +3,17 @@ import cv2
 import cv2.aruco as aruco
 import math, time 
 import os
+
+# This is the code for finding aruco marker. You can read more about it
+# here: https://www.learnopencv.com/augmented-reality-using-aruco-markers-in-opencv-c-python/
+
 class Aruco_Marker_Find():
     def __init__(self, id_to_find = 7, marker_size = 8.5):
+        '''
+        id_to_find is the id of the aruco marker you want to find;
 
+        marker_size is the side size of it [cm]
+        '''
 
         #--- 180 deg rotation matrix around the x axis
         self._R_flip      = np.zeros((3,3), dtype=np.float32)
@@ -17,10 +25,12 @@ class Aruco_Marker_Find():
         self.id_to_find = id_to_find
         self.script_path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(self.script_path)
-        self._camera_matrix = np.loadtxt('cameraMatrix.txt', delimiter=',')
-        self._camera_distortion = np.loadtxt('cameraDistortion.txt', delimiter=',') 
 
-        #--- Define the aruco dictionary
+        self._camera_matrix = np.loadtxt('cameraMatrix.txt', delimiter=',') # the file where camera matrix is located
+        self._camera_distortion = np.loadtxt('cameraDistortion.txt', delimiter=',')  # # the file where dist of the camera is located
+        # You can define the arrays above by calibrating the camera. You can find the method in real_sense.py.
+
+        #--- Define the aruco dictionary https://chev.me/arucogen/
         self._aruco_dict  = aruco.getPredefinedDictionary(aruco.DICT_4X4_100)
         self._parameters  = aruco.DetectorParameters_create()
 
@@ -70,6 +80,7 @@ class Aruco_Marker_Find():
 
             #-- Unpack the output, get only the first
             rvec, tvec = ret[0][0,0,:], ret[1][0,0,:]
+        #--- Define the aruco dictionary https://chev.me/arucogen/
             
             x = tvec[0]
             y = tvec[1]

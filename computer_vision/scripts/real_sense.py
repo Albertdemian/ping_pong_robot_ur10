@@ -13,7 +13,7 @@ import glob
 import rospy
 from geometry_msgs.msg import Point
 
-Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 10)
+Aruco_Marker = Aruco_Marker_Find(id_to_find = 7, marker_size = 10) # init the object for aruco marker
 
 class FPS():
     def __init__(self):
@@ -32,16 +32,16 @@ class FPS():
 class RealSense():
     def __init__(self):
 
-        self.ball_contour_color  = (0,255,0)
-        self.marker_contour_color  = (0,0,255)
-        self.center_color = (0,0,255)
-        self.center_line_thickness = 4
+        self.ball_contour_color  = (0,255,0) # boundary colour of the ball being detected
+        self.marker_contour_color  = (0,0,255) # # boundary colour of the ball being detected (changed to Aruco marker) 
+        self.center_color = (0,0,255) # center point colour of the ball being detected
+        self.center_line_thickness = 4 # 
 
-        self.resize_ratio = 1
-        self.camera_matrix = [[462.301, 0, 302.545],
-                            [0, 462.206, 185.762],
-                            [0,0,1]]
-        self.distortion_coeffs = [0,0,0,0,0]
+        self.resize_ratio = 1 # at what rate the frames are resized. It could inrease FPS but decrease the accuracy.
+
+        self.camera_matrix = np.loadtxt('cameraMatrix.txt', delimiter=',') # the file where camera matrix is located
+        self.distortion_coefficients = np.loadtxt('cameraDistortion.txt', delimiter=',')  # # the file where dist of the camera is located
+        # You can define the arrays above by calibrating the camera. You can find the method in real_sense.py.
         fps = 60 # set desired FPS
         
         # available resolutions = (640,360),(640,400),(640,480),(848.100),(848,480),(1280,720),(1280,800)
@@ -70,14 +70,13 @@ class RealSense():
         # Some parameters for tracking
 
         #define color boundary of the ball in HSV space
-        self.ball_boundary = ([0, 185, 184], [18, 255, 255])
+        self.ball_boundary = ([0, 185, 184], [18, 255, 255]) # you can use range-detector for extracting this range. 
     
-        # Tag offset wrt base
-
+        # Tag  ( Aruco Marker) offset wrt base
         self.tag_offset_r = np.array([0.298, -0.294, -0.11], dtype = float) #[cm]
 
 
-        self.tag_check = False
+        self.tag_check = False # flag is True if marker is found. We use it just to remember the transformation from robot to the marker and not to calculate it every time because it's time consuming.
 
         self.online_tracker_init_flag = False
 
@@ -115,6 +114,7 @@ class RealSense():
             self.tag_result_updated = self.tag_result
             self.tag_check = True
 
+        # start to determing the position of the ball in the frame
         if ball_coords != None and self.tag_check ==True:
             _, R_ct, (tag_x, tag_y, tag_z) = self.tag_result_updated
             H_ct = np.array([[R_ct[0,0], R_ct[0,1], R_ct[0,2], tag_x],
@@ -138,33 +138,6 @@ class RealSense():
         else:
             return [None, None, None], depth_image, color_image
 
-    def find_marker_frame(self, center_point, normal_vector, marker_coords):
-        xs = [point[0] for point in marker_coords]
-        ys =  [point[1] for point in marker_coords]
-        zs =  [point[2] for point in marker_coords]
-        x_min = min(xs)
-        if center_point != None:
-            for point in marker_coords:
-                if point[0] == x_min:
-                    left_circle_center = point
-            center_to_left_circle_vector = [left_circle_center[i]-center_point[i] for i in range(3)]
-
-            center_to_left_circle_vector_length = np.sqrt(center_to_left_circle_vector[0]**2 + center_to_left_circle_vector[1]**2 + center_to_left_circle_vector[2]**2)
-            
-            center_to_left_circle_vector = [center_to_left_circle_vector[i]/ center_to_left_circle_vector_length for i in range(3)]
-
-            normal_vector_length = np.sqrt(normal_vector[0]**2 + normal_vector[1]**2 + normal_vector[2]**2)
-
-            normal_vector = [normal_vector[i]/normal_vector_length for i in range(3)]
-
-            z_axes = np.linalg.multi_dot([self.roty(np.pi/2), self.rotz(-np.pi/2),normal_vector])
-
-            x_axes = np.linalg.multi_dot([self.roty(np.pi/2), self.rotz(-np.pi/2),np.array([center_to_left_circle_vector[i]*np.cos(np.pi/4) for i in range(3)], dtype = float)])
-
-            y_axes = np.linalg.multi_dot([self.roty(np.pi/2), self.rotz(-np.pi/2),np.cross(z_axes,x_axes)])
-            return (x_axes, y_axes, z_axes)
-        else: 
-            return None
     def online_ball_tracker(self, image, depth_frame, depth_intrin, tracker_type = 'CSRT'):
         '''
         # Set up tracker.
@@ -275,6 +248,9 @@ class RealSense():
 
 
     def collect_images(self, pause = 3, number_of_images = 15, folder='Pictures'):
+        '''
+        This is the code for collecting and shoting the images. It might be needed for calibration or for HSV color range finding (to extract the ball) 
+        '''
         frame = 0
         start_time = time.time()
         if not os.path.exists(folder):
