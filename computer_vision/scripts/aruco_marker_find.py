@@ -100,7 +100,7 @@ class Aruco_Marker_Find():
             #-- Now get Position and attitude f the camera respect to the marker
             pos_camera = -R_tc*np.matrix(tvec).T
             str_position = "MARKER Position x=%4.0f  y=%4.0f  z=%4.0f"%(tvec[0], tvec[1], tvec[2])
-            # print(str_position)]
+            print("____MARKER DETECTED .....___")
             return frame, R_tc, (pos_camera[0]/100, pos_camera[1]/100, pos_camera[2]/100)
         else:
             return None

@@ -4,6 +4,7 @@ import urx
 import time
 import rospy
 from rospy_tutorials.msg import Floats
+from std_msgs.msg import Float64
 from geometry_msgs.msg import Point
 from dynamic_reconfigure.msg import Config
 from time import sleep
@@ -12,7 +13,7 @@ import helper_fns
 
 
 
-def check_bounds(ball_pose, xlim=[0.7, 1.4], ylim=[-0.6, 0.6], zlim=[-0.15, 1]):
+def check_bounds(ball_pose, xlim=[0.7, 1.4], ylim=[-0.5, 0.5], zlim=[-0.2, 0.8]):
     x = ball_pose.x
     y = ball_pose.y
     z = ball_pose.z 
@@ -20,7 +21,7 @@ def check_bounds(ball_pose, xlim=[0.7, 1.4], ylim=[-0.6, 0.6], zlim=[-0.15, 1]):
     if x > xlim[0] and x< xlim[1]: 
         check_x = True
     else:
-        check_x = False
+        check_x = True
     
     if y > ylim[0] and y< ylim[1]:
         check_y = True
@@ -32,12 +33,18 @@ def check_bounds(ball_pose, xlim=[0.7, 1.4], ylim=[-0.6, 0.6], zlim=[-0.15, 1]):
     else:
         check_z = False
 
-    if check_x and check_y and check_z:
-        within_bounds = True
-    else: 
-        within_bounds = False
 
-    return within_bounds
+
+    return check_x, check_y, check_z
+
+def ball_is_close(ball_pose, x_plane = 0.9, limit = 0.15):
+    x = ball_pose.x
+    if x > x_plane-limit and x< x_plane+limit:
+        follow = True
+    else: 
+        follow = False
+    return follow
+    
 
 def interpret_flag(flag): 
     if flag == 0 :
@@ -62,12 +69,14 @@ ball_pose = Point()
 def ball_callback(position_ball):
     global ball_pose
     ball_pose = position_ball
-    print("BALL:", ball_pose)
+    # print("BALL:", ball_pose)
 
-ball_in_scene_flag = Floats()
+ball_in_scene_flag = Float64()
 def flag_callback(ball_flag):
     global ball_in_scene_flag
-    ball_in_scene_flag = ball_flag
+    ball_in_scene_flag = ball_flag.data
+
+    # print(ball_in_scene_flag)
 
 
 
@@ -80,12 +89,14 @@ r = rospy.Rate(60)
 
 cartesian_sub  = rospy.Subscriber("/end_effector_position", Floats, cartes_callback)
 ball_pose_sub = rospy.Subscriber("/ball_position_pub", Point,ball_callback )
-ball_flag_sub = rospy.Subscriber("/ball_in_a_scene_flag", Floats, flag_callback)
+ball_flag_sub = rospy.Subscriber("/ball_in_a_scene_flag", Float64, flag_callback)
 ball_poses = []
 
 start_time = time.time()
 cur_time = 0
 trajectory = helper_fns.ball_projectile()
+check = False
+x_plane_shift = 1
 while not rospy.is_shutdown(): 
     start_time = time.time()
     try:
@@ -99,47 +110,46 @@ while not rospy.is_shutdown():
             theta = cartesian_pos[4]
             epsi = cartesian_pos[5]
 
-        ball_x = ball_pose.x
-        ball_y = ball_pose.y
-        ball_z = ball_pose.z
+        
 
-        cur_time = time.time() - start_time
+        
 
         ball_in_scene = interpret_flag(ball_in_scene_flag)
-
+        # print(ball_in_scene)
         if ball_in_scene: 
-            try:
-                trajectory.step([ball_x,ball_y, ball_z], cur_time)
-            except ZeroDivisionError:
-                pass
-
-            # print("class_____: ",trajectory.ball_position)
-            # print("Node _____: ",ball_pose, "\n")
-            # print(len(trajectory.xs), "\n")
-
-            if len(trajectory.xs) >2:
-                
-                try: 
-                    trajectory.get_velocity([ball_x,ball_y, ball_z])
-                    y_inter, z_inter, time_to_plane = trajectory.get_trajectory_intercept()
-                    check = trajectory.check_intercept_bounds(y_inter,z_inter)
-                except ZeroDivisionError:
-                    pass
-
-                pose = trajectory.control(kick=False)
-                # print("flag", pose)
-                # print(check)
+            ball_x = ball_pose.x
+            ball_y = ball_pose.y
+            ball_z = ball_pose.z
 
 
-                if check:
-                    print("moving")
-                    
-                    rob.speedl([K*(pose[0]-x), K*(pose[1] - y), K*(pose[2] -z),0,0,0], 5,0.3)
 
-                else: 
-                    rob.stopl(5)
+        check_x, check_y, check_z =  check_bounds(ball_pose)
+        # print("moving")
 
-    except (TypeError, ZeroDivisionError)  :
+        vx = K*(x_plane_shift-x)
+        vy = K*(ball_y-y)
+        vz = K*(ball_z-z)
+        
+        if not check_x: 
+            vx = 0
+        
+        if not check_y: 
+            vy = 0
+            
+        if not check_z: 
+            vz = 0
+        # rob.speedl([K*(pose[0]-x), K*(pose[1] - y), K*(pose[2] -z),0,0,0], 5,0.3)
+        
+
+        if ball_is_close(ball_pose, x_plane=x_plane_shift, limit= 0.15): 
+            vx = K* (ball_x - x)
+        
+        rob.speedl([vx,vy ,vz ,0,0,0],8, 0.15)
+
+        # else: 
+        #     rob.stopl(10)
+
+    except (TypeError, ZeroDivisionError, NameError)  :
         pass
  
 
