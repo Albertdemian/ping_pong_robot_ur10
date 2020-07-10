@@ -120,30 +120,7 @@ while not rospy.is_shutdown():
             ball_x = ball_pose.x
             ball_y = ball_pose.y
             ball_z = ball_pose.z
-            # cur_time = time.time() - start_time
-            # print(cur_time)
-            # try:
-            #     trajectory.step([ball_x,ball_y, ball_z], 1/60)
-            # except ZeroDivisionError:
-            #     pass
 
-            # # print("class_____: ",trajectory.ball_position)
-            # # print("Node _____: ",ball_pose, "\n")
-            # # print(len(trajectory.xs), "\n")
-
-            # if len(trajectory.xs) >2:
-                
-            #     try: 
-            #         trajectory.get_velocity([ball_x,ball_y, ball_z])
-            #         y_inter, z_inter, time_to_plane = trajectory.get_trajectory_intercept()
-            #         check = trajectory.check_intercept_bounds(y_inter,z_inter)
-            #     except ZeroDivisionError:
-            #         pass
-
-                # pose = trajectory.control(kick=False)
-                # print("flag", pose)
-                # print("velocity", trajectory.vx, trajectory.vy, trajectory.vz)
-                # print(check)
 
 
         check_x, check_y, check_z =  check_bounds(ball_pose)
