@@ -25,6 +25,7 @@ move2 = True
 home_position = [0, -pi/2 , 0, 0, 0,0 ]
 print(home_position)
 
+gain = 5
 
 rob = urx.Robot("172.31.1.3")
 rob.set_tcp((0, 0, 0, 0, 0, 0))
@@ -55,6 +56,7 @@ try:
         time.sleep(5)
         print(rob.getj())
     
+    
     if move2: 
         _ = wait()
         #rob.speedl([0.5,0.1,0,1.57,0,0], 0.5 , 0.1)
@@ -62,13 +64,17 @@ try:
 
         robot_pos = rob.getl(wait=True)
         goal = (0.9, 0.1, 0.5,0,0,0)
+        # goal = (0.59, -0.63, 0.66)
 
-        while i < 50:
+        #while goal[0]-robot_pos[0] >0.001 or goal[1]-robot_pos[1]> 0.001 or goal[2]-robot_pos[2]>0.001 :
+        while i <=10:
 
-
-            rob.speedl([goal[0]-robot_pos[0],goal[1]-robot_pos[1],goal[2]-robot_pos[2],0,0,0], 1,0.15)
+            # rob.speedl([gain*(goal[0]-robot_pos[0]),gain*(goal[1]-robot_pos[1]),\
+                # gain*(goal[2]-robot_pos[2]),0,0,0], 5,0.20)
+            rob.speedl([-20,-20,-20,0,0,0], 0.1, 0.1)
+            # robot_pos = rob.getl(wait=True)
             i+=1
-        rob.stopl(acc = 1)
+        rob.stopl(acc = -0.5)
         #time.sleep(2)
 
 finally: 

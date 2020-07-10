@@ -144,7 +144,7 @@ while not rospy.is_shutdown():
         if ball_is_close(ball_pose, x_plane=x_plane_shift, limit= 0.15): 
             vx = K* (ball_x - x)
         
-        rob.speedl([vx,vy ,vz ,0,0,0],8, 0.1)
+        rob.speedl([vx,vy ,vz ,0,0,0],8, 0.2)
 
         # else: 
         #     rob.stopl(10)

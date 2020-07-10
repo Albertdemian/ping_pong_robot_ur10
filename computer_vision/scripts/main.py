@@ -40,7 +40,7 @@ def talker():
             ball_in_a_scene_flag = 0
             pub_ball_flag.publish(ball_in_a_scene_flag)
         
-        if flag <= max_flag_no:
+        if render_flag <= max_flag_no:
             # rospy.loginfo([ball_in_a_scene_flag])
             # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.2), cv2.COLORMAP_JET)
             color_image = cv2.resize(color_image,None, fx = D435.resize_ratio,fy= D435.resize_ratio,interpolation = cv2.INTER_CUBIC)
@@ -50,6 +50,8 @@ def talker():
             # Show images
             cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
             cv2.imshow('RealSense', color_image)
+
+        render_flag +=1
             
         fps.update()
         if cv2.waitKey(1) & 0xFF == ord('q'):
