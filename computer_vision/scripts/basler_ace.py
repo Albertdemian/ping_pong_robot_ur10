@@ -10,6 +10,7 @@ from collections import deque
 # list-like data structure with super fast appends and pops to maintain a list of the past N (x, y)-locations of the ball in our video stream.
 #  Maintaining such a queue allows us to draw the “contrail” of the ball as its being tracked.
 
+# This is the script for working with Basler Ace cameras, but we stopped improving it, because we didn't have 2 similar cameras.
 
 # Created function in order to calculate FPS
 class FPS():
