@@ -8,6 +8,7 @@ import imutils
 import os 
 import  matplotlib.pyplot as plt
 from aruco_marker_find import Aruco_Marker_Find
+import glob
 
 import rospy
 from geometry_msgs.msg import Point
@@ -96,8 +97,7 @@ class RealSense():
         color_intrin = color_frame.profile.as_video_stream_profile().intrinsics
         depth_to_color_extrin = depth_frame.profile.get_extrinsics_to(
             color_frame.profile)
-        #calculate pointcloud from frames
-
+        
         # Convert images to numpy arrays
         depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
@@ -277,6 +277,8 @@ class RealSense():
     def collect_images(self, pause = 3, number_of_images = 15, folder='Pictures'):
         frame = 0
         start_time = time.time()
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         while frame < number_of_images:
             # Wait for a coherent pair of frames: depth and color
             frames = self.pipeline.wait_for_frames()
@@ -310,3 +312,70 @@ class RealSense():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
         self.pipeline.stop()  
+
+    def camera_calibrate(self, nx = 12, ny = 9, l = 100, path='Pictures'):
+        '''
+        Chessboard should be used.
+
+        nx - number of inside corners in x;
+        ny - number of inside corners in y;
+        l - width of the square (in mm);
+
+        reference: https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html#calibration
+        '''
+        # prepare object points
+        if not os.path.exists(path):
+            os.makedirs(path)
+        #CALIBRATING THE CAMERA
+        # termination criteria
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+        # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(nx,ny,0)
+        objp = np.zeros((ny*nx, 3), np.float32)
+        objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2)
+
+        # Arrays to store object points and image points from all the images.
+        objpoints = [] # 3d point in real world space
+        imgpoints = [] # 2d points in image plane.
+
+        #Finding all the images .jpg
+        os.chdir(path)
+        images = glob.glob('*.jpg')
+        print(images)
+        print('Unrecognized images (if any):')
+        #Loop for finding corners, calculating image points and object points
+        examples = []
+        for fname in images:
+            img = cv2.imread(fname)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Find the chess board corners
+            ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+
+            # If found, add object points, image points (after refining them)
+            if ret:
+                objpoints.append(objp)
+                corners2 = cv2.cornerSubPix(gray, corners, (9, 9), (-1, -1), criteria)
+                imgpoints.append(corners2)
+                examples.append(gray)
+                # Draw and display the corners
+                img = cv2.drawChessboardCorners(img, (nx, ny), corners2, ret)
+                
+                cv2.imshow('ImageWindow', img)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            else:
+                #if some images are uncorrect
+                print(fname) #to may be delete them manually after that
+        #Calibration
+        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+        #dist – Output vector of distortion coefficients
+        # (k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]]) of 4, 5, or 8 elements.
+        #rvecs – Output vector of rotation vectors 
+        #ret-
+        #mtx- Output 3x3 floating-point camera matrix
+        #tvecs – Output vector of translation vectors estimated for each pattern view.
+        print(mtx)
+        print(dist)
+        np.save('calibration.npy', np.array([mtx, dist, rvecs, tvecs], dtype = object))

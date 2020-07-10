@@ -11,7 +11,8 @@ import cv2
 D435 = RealSense() # Init the object for working with the camera
 # D435.collect_images(number_of_images = 3, folder = 'HSV_get') # THis may be needed for HSV adjusting
 
-
+# D435.collect_images(number_of_images = 15,folder = 'Pictures') # For calibration
+# D435.camera_calibrate()
 
 # Tracking the ball
 
