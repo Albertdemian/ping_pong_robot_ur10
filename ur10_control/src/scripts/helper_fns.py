@@ -1,9 +1,27 @@
 #!/usr/bin/env python3
 import numpy as np
 
+'''
+The purpose of this class is two main things:
+- predict ball motion according to projectile motion 
+- calculate desired velocity to meet the ball for shooting depending of on concept of plactic collision
+*****
+[Note]: class is not complete and missing many modules
+*****
+The main idea is to predict ball position according to projectile motion 
+and kick the ball with angle and speed to serve it to desired position
 
-
-
+The total image is: 
+    - calculate current position of ball 
+    - calculate velocity 
+    - predict ball projectile
+    - calculate proper angle and pose where robot should meet the ball 
+    - if "kick" is True:
+    - calculate step back 
+    - take desired position (where the ball should go when the robot hit it)
+    - based on desired position and plastic collision factor:
+            calculate desired speed that robot should meet the ball with
+'''
 
 class ball_projectile():
 
@@ -26,6 +44,7 @@ class ball_projectile():
 
         # x-axis distance where robot will always recieve the ball
         self.x_intercept = 0.9
+
         # y and z limits for the robot to recieve the ball
         self.window_limit_y = [-0.6,0.6]
         self.window_limit_z = [-0.15,1]
@@ -36,11 +55,11 @@ class ball_projectile():
         self.time_between_frames = 0
         self.current_time = 0
 
-
+        #ball information   [Note: not used but might be needed later]
         self.diameter= 0.04
         self.radius = self.diameter/2
         
-        #arrays to save data 
+        #arrays to save data [prefered not to depend on them a lot to keep memory in good shape]
         self.vxs = []
         self.vys  =[]
         self.vzs  =[]
@@ -51,7 +70,11 @@ class ball_projectile():
 
 
     def get_velocity(self, pose): 
-
+        '''
+        function to calculate ball velocity and update position 
+        input: new ball position
+        output: valocity components on 3 axes
+        '''
         x1,y1,z1 = [self.xs[-2], self.ys[-2], self.zs[-2]]
         x2,y2,z2 = pose
 
@@ -65,7 +88,11 @@ class ball_projectile():
 
 
     def get_trajectory_intercept(self):
-
+        '''
+        This method is to predict ball motion based on projectile model 
+        output: - intercept point on y-z plane at x_intercept distance that is predetermined in class above
+                - time_left to reach this point
+        '''
         time_to_plane = (self.x_intercept-self.ball_position[0])/self.vx
         y_intercept = self.ball_position[1] + self.vy* time_to_plane
         z_intercept  = self.ball_position[2] + (self.vz - (0.5* self.az * time_to_plane**2))
@@ -76,6 +103,10 @@ class ball_projectile():
 
 
     def check_intercept_bounds(self, y_intercept, z_intercept):
+        '''
+        Checks if predictied intercept point is within physical bounds
+        returns: one boolean variable with True or False
+        '''
         
         if y_intercept > self.window_limit_y[0]  and y_intercept < self.window_limit_y[1]:
             within_y = True
@@ -110,10 +141,13 @@ class ball_projectile():
 
 
     def step(self, pose, time):
+        '''
+        Takes new ball pose and time since previous pose and update data in class
+        ********
+        [Note]: structure of this function is not the best and can be modified 
+        '''
         #update velocity and position of ball 
         self.time_between_frames = time
-
-    
         self.ball_position = pose
 
         if len(self.xs) >=2: 
@@ -124,6 +158,10 @@ class ball_projectile():
 
     
     def ball_closing(self):
+        '''
+        checks if the ball is going towards the robot on x-axis or in the other direction
+        if velocity component on x is negative, the ball is approaching the robot
+        '''
         if self.vx < 0: 
             coming = True
 
@@ -134,6 +172,18 @@ class ball_projectile():
 
 
     def control(self, kick = False): 
+
+        '''
+        The purpose of this function is to calculate the pose that the robot should move to
+        to meet the ball in propoer way 
+
+        **** 
+        [Note]: function is not complete
+        ****
+
+        - The primitive idea is to move to a pose orthogonal to ball direction. 
+        - The "Kick" argument is supposed later to calculate a step back to prepare for kicking the ball
+        '''
         #control velocty
         y_intercept, z_intercept, time_to_plane = self.get_trajectory_intercept()
         vx= self.vx 

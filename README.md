@@ -26,11 +26,38 @@ cd .. && catkin_make
 ```
 ###### It needs sudo privileges 
 
+### To play a little with the Robot and ROS, you can start our simple interface. 
+This interface controls the robot in both task and cartesian spaces. 
 
+![Alt text](images/interface.png?raw=True?scale=0.5 "Interface")
+
+#### To launch interface: 
+* source your terminal 
+* launch interface: 
+```bash
+roslaunch interface control.launch
+```
+
+* wait for 3 seconds for interface to synchronize with real robot configuration 
+
+* Make sure that only one "activate" botton is checked
+* You can play with sliders and then check "execute" to see the robot moving to desired position 
 ### How to start the project?
 
-#### #1 
-
+* You need to source all terminals
+* Setup wired connection with robot through network settings 
+* Connect RealSense camera with usb and setup field of view
+#### #1 To launch roscore and feedback node: 
 ```bash
-roslaunch 
+roslaunch  ur10_control control_w_ball.launch 
 ```
+
+#### #2 To launch vision node: 
+```bash
+rosrun computer_vision main.py
+```
+#### #3 To launch robot control node: 
+```bash
+rosrun ur10_control catch_ball.py
+```
+
