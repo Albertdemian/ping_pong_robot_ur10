@@ -7,6 +7,10 @@ from rospy_tutorials.msg import Floats
 from time import sleep
 from numpy import deg2rad
 
+'''
+This node is used to connect to robot and monitor position 
+in both task and joint spaces and publish them 
+'''
 
 def wait():
     if do_wait:
@@ -16,9 +20,9 @@ def wait():
 do_wait = True
 
 
-
-rob = urx.Robot("172.31.1.3")
-rob.set_tcp((0, 0, 0.185, 0, 0, 0))
+# to connect to robot via network and Initialize the robot class
+rob = urx.Robot("172.31.1.3")   #UR10 TCP/IP adress  can be found or changed in robot settings
+rob.set_tcp((0, 0, 0.185, 0, 0, 0))     #to set transformation from end effector to tool 
 sleep(1)  #leave some time to robot to process the setup commands
 
 

@@ -6,6 +6,14 @@ from rospy_tutorials.msg import Floats
 from dynamic_reconfigure.msg import Config
 from numpy import rad2deg
 
+
+'''
+This node is used to synchronize interface with the real robot state
+if robot is at a different state from the what interface indicates
+this node will make both synchronized 
+the node should work for few seconds and then will terminate itself 
+'''
+
 def callback(config):
     rospy.loginfo("""Reconfigure Request: {Joint_1}, {Joint_2},\ 
           {Joint_3}, {Joint_4}, {Joint_5},{Joint_6},{Activate}, {Execute}""".format(**config))
@@ -34,13 +42,17 @@ def cartes_callback(robot_cartesian_pos):
 
 rospy.init_node("dynamic_sync_joints")
 r = rospy.Rate(0.5)
+#subscribers to robot position and interface
 joints_sub = rospy.Subscriber("/joints_state", Floats, pos_callback)
 cartesian_sub  = rospy.Subscriber("/end_effector_position", Floats, cartes_callback)
 
+#clients to interface to be able to reconfigure the interface when needed
 joints_client = dynamic_reconfigure.client.Client("Joint_controller", timeout=30, config_callback=callback)
 cartesian_client = dynamic_reconfigure.client.Client("cartesian_controller", timeout= 30, config_callback=callback2)
 
 i = 0
+#the loop goes for 6 times with 2 Hz  = 3 seconds of running time
+#prefered not to make it more than 2Hz as there were some problems with synchronization at higher rates
 while not rospy.is_shutdown() and i <6:
     print("Position :", joints_position)
 
@@ -52,6 +64,7 @@ while not rospy.is_shutdown() and i <6:
         j5 = rad2deg(joints_position[4])
         j6 = rad2deg(joints_position[5])
         
+        #updating joints positions in interface
         joints_client.update_configuration({"Joint_1":j1, "Joint_2": j2, "Joint_3": j3, \
             "Joint_4": j4, "Joint_5": j5, "Joint_6": j6})
 
@@ -61,7 +74,8 @@ while not rospy.is_shutdown() and i <6:
         phi = rad2deg(cartesian_pos[3])
         theta = rad2deg(cartesian_pos[4])
         epsi = rad2deg(cartesian_pos[5])
-
+        
+        #updating cartesian pose in interface
         cartesian_client.update_configuration({"x":x, "y": y, "z": z, "phi": phi,\
             "theta": theta, "epsi": epsi})
 

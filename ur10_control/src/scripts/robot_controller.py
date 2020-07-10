@@ -7,7 +7,16 @@ from rospy_tutorials.msg import Floats
 from dynamic_reconfigure.msg import Config
 from time import sleep
 from numpy import deg2rad, zeros
+from sorting_variables import *
 
+'''
+This node is used to control robot using interface 
+It is responsible for receiving target position in either joint or task spaces
+and drive the robot to desired position using point to point position control
+
+Note...: the interface is showing angles values in degrees for making it more user friendly
+        but the real convention that is fed to robot is in randian scale
+'''
 
 def wait():
     if do_wait:
@@ -17,51 +26,13 @@ def wait():
 do_wait = True
 
 
-def arrange_cartesian(cartesian): 
-    var = zeros((6),dtype=float)
 
-    for element in cartesian: 
-        if element.name == "x": 
-            var[0] = element.value
-        elif element.name == "y":
-            var[1] = element.value
-        elif element.name == "z":
-            var[2] = element.value
-        elif element.name == "phi":
-            var[3] = deg2rad(element.value) 
-        elif element.name == "theta":
-            var[4] = deg2rad(element.value)
-        elif element.name == "epsi":
-            var[5] = deg2rad(element.value)
-
-    return (var[0],var[1], var[2],var[3],var[4],var[5])
-
-def arrange_joints(joints): 
-    var = zeros((6),dtype=float)
-
-    for i  in range(6):
-        element = joints[i] 
-        #print(element,"____________", element.name)
-        if element.name == "Joint_1": 
-            var[0] = deg2rad(element.value)
-        elif element.name == "Joint_2":
-            var[1] = deg2rad(element.value)
-        elif element.name == "Joint_3":
-            var[2] = deg2rad(element.value)
-        elif element.name == "Joint_4":
-            var[3] = deg2rad(element.value) 
-        elif element.name == "Joint_5":
-            var[4] = deg2rad(element.value)
-        elif element.name == "Joint_6":
-            var[5] = deg2rad(element.value)
-
-    return (var[0],var[1], var[2],var[3],var[4],var[5])
 
 
 #callback function for robot pos
-joints_position = Config()
-activate_joints = Config()
-execute_trajectory = Config()
+joints_position = Config()      #variable for retrieving joints position
+activate_joints = Config()      #a boolean variable to activate joint space control
+execute_trajectory = Config()   #another boolean variable to excute desired trajectory
 def pos_callback(robot_joints_pos):
     global joints_position, activate_joints, execute_trajectory
     joints_position = robot_joints_pos.doubles
@@ -72,9 +43,11 @@ def pos_callback(robot_joints_pos):
     print("Condition", activate_joints)
     print("Execute", execute_trajectory)'''
 
-cartesian_pos = Config()
-activate_cartesian = Config()
-execute_path = Config()
+
+#callback function for robot pos in cartesian space
+cartesian_pos = Config()        #variable to retrieve cartesian position
+activate_cartesian = Config()   #a boolean variable to activate task space control
+execute_path = Config()         #another boolean variable to excute desired path
 def cartes_callback(robot_cartesian_pos):
     global cartesian_pos , activate_cartesian, execute_path
     cartesian_pos = robot_cartesian_pos.doubles
@@ -86,22 +59,17 @@ def cartes_callback(robot_cartesian_pos):
     print("Execute", execute_path)'''
 
 
+a = 0.2  #robot acceleration
+v = 0.2  #robot velocity
 
-
- 
-
-
-
-a = 0.2
-v = 0.2
-
-rob = urx.Robot("172.31.1.3")
-rob.set_tcp((0, 0, 0, 0, 0, 0))
-rob.set_payload(0.5, (0, 0, 0.0))
+#connect to robot
+rob = urx.Robot("172.31.1.3")    #UR10 TCP/IP adress  can be found or changed in robot settings
+rob.set_tcp((0, 0, v, 0, 0, 0))  #to set transformation from end effector to tool 
+rob.set_payload(0, (0, 0, 0.0))     #to set payload if there is any
 sleep(1)  #leave some time to robot to process the setup commands
 
 rospy.init_node("ur10_commander")
-r = rospy.Rate(60)
+r = rospy.Rate(60) #60Hz
 
 cartesian_sub = rospy.Subscriber("/cartesian_controller/parameter_updates", Config, cartes_callback )
 joints_sub  = rospy.Subscriber("/Joint_controller/parameter_updates", Config, pos_callback)
@@ -109,27 +77,31 @@ joints_sub  = rospy.Subscriber("/Joint_controller/parameter_updates", Config, po
 cur_time = time.time()
 while not rospy.is_shutdown():
 
-    #joints_goal = arrange_joints(joints_position)
-    #print(type(joints_position))
     try:
+        #check first if the desired position vector is not empty
         if len(joints_position)>0:
+            #update command variable and sort variables in the right order
             goal_joints_pos = arrange_joints(joints_position)
             
-
+        #Same procedure but for task space control
         if len(cartesian_pos)>0:
             goal_cartesian_pos = arrange_cartesian(cartesian_pos)
 
+        #check if it should move in task space or not
         if activate_cartesian and execute_path: 
             print("cartesian")
+            # move to target
             rob.movel(goal_cartesian_pos, a,v, wait=False)
-            old_err = 0
+            
+            #check error to target and keep moving till distance to target is within tolerance
             while rob._get_dist(goal_cartesian_pos, False) > 0.001:
                 print("stuck", rob._get_dist(goal_joints_pos, False))
-                #new_err = rob._get_dist()
+                
+                #if distance still bigger than tolerance wait for 100ms 
                 time.sleep(0.1)
 
         
-
+        #same for joint space
         if activate_joints and execute_trajectory:
             
             

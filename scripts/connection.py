@@ -5,6 +5,10 @@ from math import pi
 from time import sleep
 from numpy import deg2rad
 
+'''
+This is a dummy script used to test quickly some commands related to UR10 control
+'''
+
 a = 0.2
 v = 0.2
 
